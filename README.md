@@ -445,4 +445,153 @@ A skill deve atingir os seguintes mínimos em **todos os 3 projetos**:
 - **A skill deve ser copiável** — se ela só funciona em um projeto específico, está acoplada demais. Teste nos 3 projetos para validar.
 - **Projetos diferentes exigem adaptação** — a Fase 3 de um projeto já parcialmente organizado não vai ter as mesmas transformações de um monolito. Sua skill deve se adaptar ao contexto.
 - **Pedir confirmação na Fase 2 é obrigatório** — o humano deve revisar o relatório antes de qualquer modificação.
-- **Consulte as referências do curso** — revise a documentação oficial da ferramenta escolhida e os materiais das aulas para relembrar a estrutura e anatomia de uma skill.
+- Conserte as referências do curso — revise a documentação oficial da ferramenta escolhida e os materiais das aulas para relembrar a estrutura e anatomia de uma skill.
+
+---------------------------------------------------------
+
+# Análise Manual: code-smells-project (Python/Flask)
+
+## Problemas Identificados
+
+### 1. SQL Injection (CRITICAL) - [Problema de segurança]
+- **Arquivo**: `models.py`
+- **Descrição**: Neste arquivo é feito o uso de concatenação de strings em queries SQL, ao invés de queries parametrizadas. Isso permitindo execução de comandos arbitrários, expondo o sistema a ataques de SQL Injection.
+- **Exemplo**: 
+    1. ```  
+        cursor.execute("SELECT * FROM usuarios WHERE id = " + str(id)) // Valor de id pode manipular a query  
+        
+        ```
+    
+    2. ``` 
+        cursor.execute("SELECT * FROM usuarios WHERE email = '" + email + "' AND senha = '" + senha + "'") // email e senha podem conter ' OR 1=1 -- -'
+    
+
+### 2. Lógica de Negócio Misturada com Acesso a Dados (MEDIUM) - [Problema de separação de responsabilidades]
+- **Arquivo**: `models.py`
+- **Descrição**: A função `relatorio_vendas` calcula regras de desconto
+  diretamente junto às queries SQL:
+   ```
+      def relatorio_vendas():
+        # ... queries SQL ...
+        
+        #logica de negócio
+        if faturamento > 10000:
+            desconto = faturamento * 0.1
+        elif faturamento > 5000:
+            desconto = faturamento * 0.05
+    ```
+  Na função `criar_pedido`, é feito validação de estoque
+  e cálculo totais no mesmo nível do repositório.
+  Isso mostra violação de separação de resposabilidade, dificulta criação de testes de unidade e reuso da regra de negócio.
+
+
+### 3. Tratamento de Erros Inconsistente (MEDIUM) - [Problema de tratamento de erros/segurança]
+- **Arquivo**: `controllers.py`
+- **Descrição**: Blocos `try...except` genéricos que retornam exceções do sistema diretamente para o cliente, exemplo: 
+    ```
+        except Exception as e:
+            return jsonify({"erro": str(e)}), 500  # ← expõe mensagem interna
+    ```
+    Um tratamento desse tipo poderia retornar algo como: **"erro": "no such table: produtos"** ou **"erro": "UNIQUE constraint failed: usuarios.email"**, detalhando schemas de banco.
+
+
+### 4. Números Mágicos (LOW) - [Problema de code smell]
+- **Arquivo**: `models.py`
+- **Descrição**: Uso de valores fixos (10000, 5000, 1000) para lógica de negócio sem constantes nomeadas. Esses valores deveriam ser constantes no projeto. Valores arbitrários diretamente no código dificulta a alteração e clareza.
+
+### 5. Uso de print para Logging (LOW) - [Problema de code smell/observabilidade]
+- **Arquivo**: Todo o projeto.
+- **Descrição**: O projeto inteiro utiliza a função `print()` para registrar logs de erro, criação de recursos e notificações em vez de módulo `logging`. Em um ambiente de produção, esta abordagem carece de metadados essenciais para observabilidade, como níveis de log (INFO, WARNING, ERROR), timestamps precisos e identificadores de contexto.
+
+
+# Análise Manual: ecommerce-api-legacy (Node.js/Express)
+
+## Problemas Identificados
+
+### 1. Configurações Sensíveis Hardcoded (CRITICAL) - [Problema de segurança]
+- **Arquivo**: `src/utils.js`
+- **Descrição**: Chaves de API e senhas de banco de dados expostas diretamente no código. Temos: 
+```  
+    const config = {
+        dbUser: "admin_master",
+        dbPass: "senha_super_secreta_prod_123", 
+        paymentGatewayKey: "pk_live_1234567890abcdef",
+        smtpUser: "no-reply@fullcycle.com.br",
+        port: 3000
+    }
+```
+Da forma que está sendo utilizado, existe um risco muito grande de exposição das credenciais. Além disso, expõe chave do gateway diretamente no log.
+
+### 2. Todo o fluxo da aplicação está em um único arquivo (MEDIUM) - [Problema de acoplamento / violação de SRP]
+- **Arquivo**: `src/AppManager.js`
+- **Descrição**: A classe `AppManager` centraliza múltiplas funções (DB, Rotas, Lógica). Não existe separação clara de responsabilidades. Isso dificulta manutenções e testes.
+
+### 3. N+1 Queries no Relatório Financeiro (MEDIUM) - [Problema de performance]
+- **Arquivo**: `src/AppManager.js` (`/api/admin/financial-report`)
+- **Descrição**: Para cada curso é feita uma query de matrículas, e para
+  cada matrícula são feitas mais duas queries (usuário e pagamento).
+  Com volume real de dados, o número de queries cresce de forma
+  proporcional a cursos × alunos. Isso pode levar a um sério problema de performance em produção.
+
+
+### 4. Sistema de logging inadequado (LOW) - [Problema de observabilidade]
+- **Arquivo**: `src/AppManager.js`
+- **Descrição**: Uso extensivo de `console.log` para depuração no fluxo principal. Sem nível, sem timestamp, sem persistência de logs. Mesmo ponto observado no projeto `code-smells-project`, aqui agravado pela exposição de dados sensíveis nos logs.
+
+### 5. Nomenclatura de variáveis abreviadas (LOW) - [Problema de code smell]
+- **Arquivo**: `src/AppManager.js`
+- **Descrição**: Uso de variáveis como `u`, `e`, `p`, `cid` e `cc` dificulta o entendimento do código sem uma análise profunda do contexto. Isso é um clássico problema de code smell.
+
+
+
+# Análise Manual: task-manager-api (Python/Flask)
+
+## Problemas Identificados
+
+### 1. Credenciais SMTP Hardcoded (CRITICAL) - [Problema de segurança]
+- **Arquivo**: `services/notification_service.py`
+- **Descrição**: E-mail e senha de servidor Gmail expostos no código fonte. Se o repositório for acessado indevidamente, a conta de email fica comprometida (invasão, envio de spam/phishing). Deveria vir de variáveis de ambiente.
+
+### 2. Lógica duplicada (MEDIUM) - [Problema de code smell]
+- **Arquivos**: `routes/task_routes.py`, `routes/user_routes.py`, `report_routes.py`
+- **Descrição**: Lógica de validação e estado de tarefas concentrada nas rotas, além do fato de estar duplicada. Exemplo:
+```
+if t.due_date < datetime.utcnow():
+    if t.status != 'done' and t.status != 'cancelled':
+
+```
+Essa validação acima de repete em vários pontos do projeto. Poderia ser um único método de validação.
+  
+### 3. Mistura de domínios (MEDIUM) - [Problema de acoplamento]
+- **Arquivo**: `routes/report_routes.py`
+- **Descrição**: Nesse arquivo é feito o uso de `Blueprint`no `Flask` para agrupar rotas, porém esse agrupamento acumula dois domínios distintos. Exemplo: 
+```
+   # Domínio 1: Relatórios
+    @report_bp.route('/reports/summary', methods=['GET'])
+    def summary_report(): ...
+
+    @report_bp.route('/reports/user/<int:user_id>', methods=['GET'])
+    def user_report(): ...
+
+    # Domínio 2: CRUD de Categorias
+    @report_bp.route('/categories', methods=['GET'])
+    def get_categories(): ...
+
+    @report_bp.route('/categories', methods=['POST'])
+    def create_category(): ...
+
+    @report_bp.route('/categories/<int:cat_id>', methods=['PUT'])
+    def update_category(): ...
+
+    @report_bp.route('/categories/<int:cat_id>', methods=['DELETE'])
+    def delete_category(): ...
+```
+Relatórios são operações de leitura e não modificam dados, enquanto isso, categorias são un recurso gerenciável (CRUD). Isso torna-se um problema porque quem faz manutenção de relatórios, precisa mexer no mesmo arquivo de quem faz manutenção de categorias. Além disso, dificulta aplicação de middlewares, exemplo: relatório para um perfil X ou categorias para um perfil Y.
+
+### 4. Imports Não Utilizados (LOW) - [Problema de code smell]
+- **Arquivo**: `app.py`, `task_routes.py`, `report_routes.py`, etc.
+- **Descrição**: Muitos imports esquecidos em diversos arquivos do projeto.
+
+### 5. Falta de Logs (LOW)
+- **Arquivo**: `user_routes.py`
+- **Descrição**: Identificado blocos de capturas de exceções implementados de sem a captura real do erro, com a cláusula `except:`, ao invés de `except Exception as e:` (ruim também, mas "menos pior"). Basicamente da forma que é feito está apenas retornando o erro genérico e não criando log de nada, deixando o debug totalmente no escuro.
