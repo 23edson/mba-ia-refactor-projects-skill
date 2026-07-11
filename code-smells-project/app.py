@@ -1,29 +1,43 @@
-from flask import Flask, jsonify
+import logging
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import config
 from database import get_db
-import logging
-
-# Import Blueprints
+from routes.auth_helper import token_required, admin_required
 from routes.produto_routes import produto_bp
 from routes.usuario_routes import usuario_bp
 from routes.pedido_routes import pedido_bp
 from routes.relatorio_routes import relatorio_bp
-from routes.admin_routes import admin_bp
+
+# Configura logs do servidor (PT-02 / AP-13)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = config.SECRET_KEY
 app.config["DEBUG"] = config.DEBUG
 CORS(app)
 
-# Register Blueprints
+# Registra os Blueprints (PT-04 / AP-04)
 app.register_blueprint(produto_bp)
 app.register_blueprint(usuario_bp)
 app.register_blueprint(pedido_bp)
 app.register_blueprint(relatorio_bp)
-app.register_blueprint(admin_bp)
 
-# Health check route
+@app.route("/")
+def index():
+    return jsonify({
+        "mensagem": "Bem-vindo à API da Loja",
+        "versao": "1.0.0",
+        "endpoints": {
+            "produtos": "/produtos",
+            "usuarios": "/usuarios",
+            "pedidos": "/pedidos",
+            "login": "/login",
+            "relatorios": "/relatorios/vendas",
+            "health": "/health"
+        }
+    })
+
 @app.route("/health", methods=["GET"])
 def health_check():
     try:
@@ -31,7 +45,7 @@ def health_check():
         cursor = db.cursor()
         cursor.execute("SELECT 1")
         
-        cursor.execute("SELECT COUNT(*) FROM produtos WHERE ativo = 1")
+        cursor.execute("SELECT COUNT(*) FROM produtos")
         produtos = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) FROM usuarios")
@@ -49,55 +63,72 @@ def health_check():
                 "pedidos": pedidos
             },
             "versao": "1.0.0",
-            "ambiente": "desenvolvimento" if config.DEBUG else "producao"
-            # Omitida a chave secreta aqui para evitar vazamento de credenciais (AP-02)
+            "ambiente": "producao",
+            "db_path": config.DATABASE_PATH,
+            "debug": config.DEBUG
+            # Removido "secret_key" para evitar vazamento de credencial (C-2 / AP-02)
         }), 200
     except Exception as e:
-        logging.error(f"Erro no health check: {e}")
         return jsonify({"status": "erro", "detalhes": "Não foi possível conectar ao banco de dados"}), 500
 
-# Home route (welcome message)
-@app.route("/", methods=["GET"])
-def index():
-    return jsonify({
-        "mensagem": "Bem-vindo à API da Loja",
-        "versao": "1.0.0",
-        "endpoints": {
-            "produtos": "/produtos",
-            "usuarios": "/usuarios",
-            "pedidos": "/pedidos",
-            "login": "/login",
-            "relatorios": "/relatorios/vendas",
-            "health": "/health"
-        }
-    })
+@app.route("/admin/reset-db", methods=["POST"])
+@token_required
+@admin_required
+def reset_database():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM itens_pedido")
+    cursor.execute("DELETE FROM pedidos")
+    cursor.execute("DELETE FROM produtos")
+    cursor.execute("DELETE FROM usuarios")
+    db.commit()
+    
+    # Recria o seed do banco de dados (re-insere tabelas e registros padrões)
+    from database import init_db
+    init_db(db)
+    
+    logging.warning("!!! BANCO DE DADOS RESETADO PELO ADMINISTRADOR !!!")
+    return jsonify({"mensagem": "Banco de dados resetado", "sucesso": True}), 200
 
-# Centralized Error Handlers (PT-08)
+@app.route("/admin/query", methods=["POST"])
+@token_required
+@admin_required
+def executar_query():
+    dados = request.get_json()
+    query = dados.get("sql", "")
+    if not query:
+        return jsonify({"erro": "Query não informada"}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute(query)
+        if query.strip().upper().startswith("SELECT"):
+            rows = cursor.fetchall()
+            result = [dict(row) for row in rows]
+            return jsonify({"dados": result, "sucesso": True}), 200
+        else:
+            db.commit()
+            return jsonify({"mensagem": "Query executada", "sucesso": True}), 200
+    except Exception as e:
+        # Erro amigável para query manual do admin
+        return jsonify({"erro": str(e)}), 400
+
+# Centralização de tratamento de erros (PT-08 / AP-10)
 @app.errorhandler(ValueError)
 def handle_value_error(e):
-    return jsonify({"erro": str(e)}), 400
-
-@app.errorhandler(KeyError)
-def handle_key_error(e):
-    msg = str(e).strip("'").strip('"')
-    return jsonify({"erro": msg}), 404
-
-@app.errorhandler(PermissionError)
-def handle_permission_error(e):
-    return jsonify({"erro": str(e)}), 401
+    return jsonify({"erro": str(e), "sucesso": False}), 400
 
 @app.errorhandler(Exception)
 def handle_generic_error(e):
-    logging.error(f"Erro inesperado: {e}", exc_info=True)
-    return jsonify({"erro": "Erro interno no servidor"}), 500
+    logging.error(f"Erro inesperado no servidor: {e}", exc_info=True)
+    return jsonify({"erro": "Erro interno do servidor", "sucesso": False}), 500
 
 if __name__ == "__main__":
-    # Inicia e popula banco se necessário
+    # Inicializa banco de dados
     get_db()
-    
-    logging.info("=" * 50)
+    logging.info("==================================================")
     logging.info("SERVIDOR INICIADO")
-    logging.info(f"Rodando em http://localhost:5000 (debug={config.DEBUG})")
-    logging.info("=" * 50)
-    
+    logging.info("Rodando em http://localhost:5000")
+    logging.info("==================================================")
     app.run(host="0.0.0.0", port=5000, debug=config.DEBUG)

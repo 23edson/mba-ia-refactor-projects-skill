@@ -25,7 +25,7 @@ Antes de iniciar, carregue os arquivos conforme a fase:
 
 ### Passos
 
-1. **Mapear estrutura**: liste todos os arquivos e diretórios do projeto. Conte arquivos por tipo (`.py`, `.js`, `.ts`, etc.).
+1. **Mapear estrutura**: liste todos os arquivos e diretórios do projeto. Conte arquivos por tipo (`.py`, `.js`, `.ts`, etc.). Identifique arquivos de teste existentes (ex: sob pastas `tests/`, `test/`, arquivos com sufixo `.test.js`, `.spec.js`, prefixo `test_*.py`, ou arquivos `.http`).
 
 2. **Detectar stack**: aplique as heurísticas de `references/project-analysis.md` para identificar:
    - Linguagem principal
@@ -51,6 +51,7 @@ Dependencies:  <lista de principais dependências>
 Domain:        <descrição em 1 linha do que a aplicação faz>
 Architecture:  <monolítica / parcialmente separada / MVC incompleto> — <breve descrição da situação atual>
 Source files:  <N> files analyzed
+Test files:    <M> test files detected
 DB tables:     <lista de tabelas detectadas>
 ================================
 ```
@@ -115,6 +116,12 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
 
 3. **Aplicar transformações**: para cada finding do relatório da Fase 2, aplique o padrão de transformação correspondente do playbook. Priorize CRITICAL → HIGH → MEDIUM → LOW.
 
+3.1 **Refatorar Arquivos de Teste**:
+   - Se houver arquivos de teste detectados na Fase 1 (ex: `*.test.js`, `test_*.py`, `.http`), analise se precisam ser refatorados para se adequarem à nova estrutura MVC.
+   - Atualize caminhos de importação (ex: de classes monolíticas legadas como `AppManager` para as instâncias limpas do express/app ou novos models/controllers).
+   - Ajuste payloads, rotas, mocks e cabeçalhos de autenticação necessários nos testes para condizer com o código refatorado.
+   - Certifique-se de que a inicialização e encerramento do banco de dados (seeds, teardowns) estejam corretamente declarados nas suítes de teste (ex: `database.initDb()` ou similar).
+
 4. **Regras inegociáveis durante a refatoração**:
    - Nenhuma credencial hardcoded — use variáveis de ambiente ou arquivo de config
    - Nenhuma query SQL em controllers ou routes
@@ -132,9 +139,9 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
    - **Nunca avance para o passo de validação sem este passo concluído.** Ausência de dependência causa falha crítica em qualquer instalação fresh do projeto.
 
 6. **Validar resultado**:
-   - Execute a aplicação: `python app.py` / `node index.js` / equivalente
-   - Confirme que inicia sem erros e que não há erros de linting.
-   - Teste os endpoints originais (pelo menos 1 de cada recurso)
+   - Execute a aplicação: `python app.py` / `node index.js` / equivalente e confirme que inicia sem erros e que não há erros de linting.
+   - Execute a suíte de testes automatizados do projeto (`npm test`, `pytest`, ou equivalente) e verifique se todos os testes passam (100% de sucesso).
+   - Teste manualmente os endpoints originais (pelo menos 1 de cada recurso).
    - Reporte o resultado:
 
 ```
@@ -147,6 +154,7 @@ PHASE 3: REFACTORING COMPLETE
 ## Validation
   ✓ Application boots without errors
   ✓ All endpoints respond correctly
+  ✓ All test suites pass successfully (100% success)
   ✓ Zero anti-patterns remaining
 ================================
 ```

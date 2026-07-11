@@ -1,43 +1,50 @@
-from models import usuario as usuario_model
 import bcrypt
+from models import usuario as usuario_model
 
-def listar_usuarios():
-    return usuario_model.get_todos()
+def listar_usuarios(db):
+    return usuario_model.get_todos_usuarios(db)
 
-def buscar_usuario(usuario_id):
-    usuario = usuario_model.get_por_id(usuario_id)
+def buscar_usuario(db, usuario_id):
+    usuario = usuario_model.get_usuario_por_id(db, usuario_id)
     if not usuario:
-        raise KeyError("Usuário não encontrado")
+        raise ValueError("Usuário não encontrado")
     return usuario
 
-def criar_usuario(nome, email, senha):
+def criar_usuario(db, dados):
+    if not dados:
+        raise ValueError("Dados inválidos")
+        
+    nome = dados.get("nome", "").strip()
+    email = dados.get("email", "").strip()
+    senha = dados.get("senha", "")
+    tipo = dados.get("tipo", "cliente")
+
     if not nome or not email or not senha:
         raise ValueError("Nome, email e senha são obrigatórios")
-    
-    # Hashing password
-    senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
-    # Verificar se email já existe
-    usuario_existente = usuario_model.get_por_email(email)
+
+    # Verifica se já existe o email cadastrado
+    usuario_existente = usuario_model.get_usuario_por_email(db, email)
     if usuario_existente:
         raise ValueError("Email já cadastrado")
-        
-    usuario_id = usuario_model.criar(nome, email, senha_hash)
+
+    # Hash da senha usando bcrypt (PT-03)
+    senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    usuario_id = usuario_model.criar_usuario(db, nome, email, senha_hash, tipo)
     return {"id": usuario_id}
 
-def login(email, senha):
+def login(db, dados):
+    if not dados:
+        raise ValueError("Dados inválidos")
+        
+    email = dados.get("email", "").strip()
+    senha = dados.get("senha", "")
+
     if not email or not senha:
         raise ValueError("Email e senha são obrigatórios")
-        
-    usuario = usuario_model.get_por_email(email)
+
+    usuario = usuario_model.login_usuario(db, email, senha)
     if not usuario:
-        raise PermissionError("Email ou senha inválidos")
+        raise ValueError("Email ou senha inválidos")
         
-    # Verificar a senha usando bcrypt
-    stored_hash = usuario.get("senha")
-    if not stored_hash or not bcrypt.checkpw(senha.encode('utf-8'), stored_hash.encode('utf-8')):
-        raise PermissionError("Email ou senha inválidos")
-        
-    # Remover senha do dicionário de retorno
-    usuario.pop("senha", None)
     return usuario

@@ -129,6 +129,15 @@ def _row_to_dict(row):
     }
 ```
 
+> ⚠️ **PASSO OBRIGATÓRIO — Registrar nova dependência:**
+> Sempre que introduzir uma biblioteca nova no código (como a de hash de senhas),
+> atualize imediatamente o arquivo de dependências identificado na **Fase 1**
+> (ex: `requirements.txt`, `package.json`, `Gemfile`, `go.mod`, `pom.xml`, etc.)
+> usando o gerenciador de pacotes da stack detectada. Adapte o comando à linguagem do projeto.
+>
+> **Falhar neste passo causa erro de módulo não encontrado em qualquer instalação fresh
+> do projeto — classificado como CRITICAL no catálogo de anti-patterns.**
+
 ---
 
 ## PT-04 — Decompor God Class em MVC (AP-04)
@@ -451,6 +460,56 @@ const tokenRequired = async (req, res, next) => {
 
 ---
 
+## PT-13 — Refatoração de Testes (Refactoring Tests)
+
+**Antes (Importando a God Class monolítica e executando sem DB estruturado):**
+```javascript
+const AppManager = require('../src/AppManager');
+const manager = new AppManager();
+manager.initDb();
+// ...
+```
+
+**Depois (Importando o Express App e usando Supertest com inicialização condicional e Promise-based DB):**
+```javascript
+const request = require('supertest');
+const app = require('../app');
+const database = require('../database');
+
+beforeAll(async () => {
+    await database.initDb();
+});
+
+describe('Checkout API', () => {
+    it('deve cadastrar usuário com hash e salvar matrícula', async () => {
+        const res = await request(app)
+            .post('/api/checkout')
+            .send({ usr: 'Leo', eml: 'leo@test.com', pwd: 'pwd', c_id: 1, card: '4111222233334444' });
+        expect(res.status).toBe(200);
+    });
+});
+```
+
+**Python — Antes:**
+```python
+from app import app, db
+# Teste que assume database global mutável
+```
+
+**Python — Depois:**
+```python
+import pytest
+from app import app
+from database import init_db
+
+@pytest.fixture(autouse=True)
+def setup_db():
+    init_db()
+    yield
+```
+
+---
+
 ## Ordem de Aplicação Recomendada
 
 Sempre aplique as transformações nesta ordem para minimizar regressões:
@@ -467,3 +526,4 @@ Sempre aplique as transformações nesta ordem para minimizar regressões:
 10. **PT-12** (autenticação de rotas) — proteção e middlewares
 11. **PT-10** (deprecated APIs) — substituições pontuais
 12. **PT-11** (código não utilizado) — limpeza final com linter
+13. **PT-13** (testes) — refatoração/criação de arquivos de teste para a nova arquitetura

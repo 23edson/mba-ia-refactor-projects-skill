@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:3000
+@baseUrl = http://localhost:3005
 
 ### Checkout - sucesso
 POST {{baseUrl}}/api/checkout
@@ -26,6 +26,8 @@ Content-Type: application/json
 
 ### Relatório financeiro administrativo
 GET {{baseUrl}}/api/admin/financial-report
+Authorization: Bearer fake-jwt-token-1
 
-### Deletar usuário
+### Deletar usuário (deve falhar devido a restrição de integridade referencial para Leonan ID 1)
 DELETE {{baseUrl}}/api/users/1
+Authorization: Bearer fake-jwt-token-1

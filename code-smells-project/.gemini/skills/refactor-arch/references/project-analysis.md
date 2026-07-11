@@ -111,5 +111,6 @@ Antes de passar para a Fase 2, confirme que você identificou:
 - [ ] Principais dependências identificadas
 - [ ] Entry point da aplicação
 - [ ] Todos os arquivos com sua responsabilidade atual
+- [ ] Arquivos de teste existentes e formato de testes (ex: `*.test.js`, `test_*.py`, `.http`, etc.)
 - [ ] Número total de arquivos analisados
 - [ ] Domínio da aplicação (e-commerce, LMS, task manager, etc.)

@@ -1,14 +1,14 @@
 from flask import Blueprint, jsonify
-from controllers import pedido_controller
-from routes.auth import admin_required
+from database import get_db
+from controllers import relatorio_controller
+from routes.auth_helper import token_required, admin_required
 
 relatorio_bp = Blueprint("relatorios", __name__)
 
 @relatorio_bp.route("/relatorios/vendas", methods=["GET"])
+@token_required
 @admin_required
 def relatorio_vendas():
-    try:
-        relatorio = pedido_controller.relatorio_vendas()
-        return jsonify({"dados": relatorio, "sucesso": True}), 200
-    except Exception:
-        return jsonify({"erro": "Erro interno no servidor"}), 500
+    db = get_db()
+    relatorio = relatorio_controller.gerar_relatorio_vendas(db)
+    return jsonify({"dados": relatorio, "sucesso": True}), 200
