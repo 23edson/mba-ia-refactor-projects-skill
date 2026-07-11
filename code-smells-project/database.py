@@ -1,16 +1,17 @@
 import sqlite3
-import os
+import bcrypt
+import config
 
 db_connection = None
-db_path = "loja.db"
 
 def get_db():
     global db_connection
     if db_connection is None:
-        db_connection = sqlite3.connect(db_path, check_same_thread=False)
+        db_connection = sqlite3.connect(config.DATABASE_PATH, check_same_thread=False)
         db_connection.row_factory = sqlite3.Row
         cursor = db_connection.cursor()
 
+        # Criar tabelas se não existirem
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS produtos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +54,7 @@ def get_db():
         """)
         db_connection.commit()
 
+        # Seed data se as tabelas estiverem vazias
         cursor.execute("SELECT COUNT(*) FROM produtos")
         if cursor.fetchone()[0] == 0:
             produtos = [
@@ -72,10 +74,15 @@ def get_db():
                 produtos
             )
 
+            # Criptografar senhas mock
+            admin_pwd = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            joao_pwd = bcrypt.hashpw("123456".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            maria_pwd = bcrypt.hashpw("senha123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
             usuarios = [
-                ("Admin", "admin@loja.com", "admin123", "admin"),
-                ("João Silva", "joao@email.com", "123456", "cliente"),
-                ("Maria Santos", "maria@email.com", "senha123", "cliente"),
+                ("Admin", "admin@loja.com", admin_pwd, "admin"),
+                ("João Silva", "joao@email.com", joao_pwd, "cliente"),
+                ("Maria Santos", "maria@email.com", maria_pwd, "cliente"),
             ]
             cursor.executemany(
                 "INSERT INTO usuarios (nome, email, senha, tipo) VALUES (?, ?, ?, ?)",
