@@ -121,6 +121,7 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
    - Nenhuma lógica de negócio em models
    - Error handling centralizado — nunca exponha stack traces ao cliente
    - Senhas sempre com hash (bcrypt ou equivalente)
+   - Autenticação em rotas sensíveis e administrativas (ex: deleção de usuários, relatórios, rotas /admin) usando decoradores/middlewares adequados (PT-12)
 
 5. **Limpeza e Linting**:
    - Execute uma ferramenta de análise estática (linter, como ESLint para Node.js ou Flake8/Pylint para Python) para identificar e remover automaticamente variáveis e imports não utilizados.
