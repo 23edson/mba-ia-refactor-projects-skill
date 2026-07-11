@@ -129,6 +129,15 @@ def _row_to_dict(row):
     }
 ```
 
+> ⚠️ **PASSO OBRIGATÓRIO — Registrar nova dependência:**
+> Sempre que introduzir uma biblioteca nova no código (como a de hash de senhas),
+> atualize imediatamente o arquivo de dependências identificado na **Fase 1**
+> (ex: `requirements.txt`, `package.json`, `Gemfile`, `go.mod`, `pom.xml`, etc.)
+> usando o gerenciador de pacotes da stack detectada. Adapte o comando à linguagem do projeto.
+>
+> **Falhar neste passo causa erro de módulo não encontrado em qualquer instalação fresh
+> do projeto — classificado como CRITICAL no catálogo de anti-patterns.**
+
 ---
 
 ## PT-04 — Decompor God Class em MVC (AP-04)

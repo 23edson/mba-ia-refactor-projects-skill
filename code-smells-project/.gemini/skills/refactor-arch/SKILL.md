@@ -126,6 +126,11 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
    - Execute uma ferramenta de análise estática (linter, como ESLint para Node.js ou Flake8/Pylint para Python) para identificar e remover automaticamente variáveis e imports não utilizados.
    - Se o projeto não tiver um linter configurado, adicione um e configure-o com regras padrão.
 
+5.1 **Verificar arquivo de dependências** *(passo obrigatório)*:
+   - Para cada nova biblioteca introduzida durante a refatoração, verifique se ela está registrada no arquivo de dependências identificado na **Fase 1** (ex: `requirements.txt`, `package.json`, `Gemfile`, `go.mod`, `pom.xml`, etc.).
+   - Use o gerenciador de pacotes da stack detectada para confirmar a versão instalada e registrá-la. Adapte o comando à linguagem do projeto.
+   - **Nunca avance para o passo de validação sem este passo concluído.** Ausência de dependência causa falha crítica em qualquer instalação fresh do projeto.
+
 6. **Validar resultado**:
    - Execute a aplicação: `python app.py` / `node index.js` / equivalente
    - Confirme que inicia sem erros e que não há erros de linting.

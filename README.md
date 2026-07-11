@@ -595,3 +595,172 @@ Relatórios são operações de leitura e não modificam dados, enquanto isso, c
 ### 5. Falta de Logs (LOW)
 - **Arquivo**: `user_routes.py`
 - **Descrição**: Identificado blocos de capturas de exceções implementados de sem a captura real do erro, com a cláusula `except:`, ao invés de `except Exception as e:` (ruim também, mas "menos pior"). Basicamente da forma que é feito está apenas retornando o erro genérico e não criando log de nada, deixando o debug totalmente no escuro.
+
+---------------------------------------------------------
+
+# Construção da Skill
+
+## Decisões de Design
+A Skill foi estruturada sob o diretório `.gemini/skills/refactor-arch/` contendo o arquivo de instruções de fluxo `SKILL.md` e referências sob o diretório `references/` cobrindo 5 áreas de conhecimento fundamentais:
+1. **Detecção de Projeto (`project-analysis.md`)**: Contém heurísticas para descobrir automaticamente a stack tecnológica e banco de dados.
+2. **Catálogo de Anti-Patterns (`antipatterns-catalog.md`)**: Define as assinaturas de problemas e severidades (CRITICAL, HIGH, MEDIUM, LOW) com base nas violações de MVC e SOLID.
+3. **Template de Relatório (`audit-report-template.md`)**: Garante um layout visual estruturado e ordenado por gravidade para a Fase 2.
+4. **Playbook de Refatoração (`refactoring-playbook.md`)**: Fornece transformações e exemplos concretos (Antes/Depois) para linguagens diferentes.
+5. **Diretrizes MVC (`mvc-guidelines.md`)**: Apresenta a estrutura de pastas alvo e as responsabilidades únicas de cada camada.
+
+## Catálogo de Anti-Patterns
+Foram mapeados os seguintes anti-patterns:
+- **AP-01**: SQL Injection (CRITICAL)
+- **AP-02**: Credenciais Hardcoded (CRITICAL)
+- **AP-03**: Senhas em Texto Puro (CRITICAL)
+- **AP-04**: God Class / Monolito (CRITICAL)
+- **AP-05**: Lógica de Negócio em Controller/Route (HIGH)
+- **AP-06**: Sem Autenticação em Rotas Protegidas (HIGH)
+- **AP-07**: Sem Transação em Operações Compostas (HIGH)
+- **AP-08**: N+1 Queries (MEDIUM)
+- **AP-10**: Erro Interno Exposto ao Cliente (MEDIUM)
+- **AP-11**: Hard Delete sem Verificação de Integridade (MEDIUM)
+- **AP-12**: Magic Numbers (LOW)
+- **AP-13**: Console/Print como Logging (LOW)
+- **AP-14**: Shadowing / Nomenclatura Problemática (LOW)
+- **AP-15**: API Deprecated / Obsoleta (LOW)
+- **AP-16**: Código Não Utilizado (LOW)
+
+## Agnóstica de Tecnologia
+A skill foi projetada para focar na lógica arquitetural e não em sintaxe específica, separando os guias por stack no playbook de refatoração, mapeando padrões equivalentes em Python/Flask e Node.js/Express.
+
+## Desafios e Soluções
+- **Transação no SQLite (Node.js)**: A API do sqlite3 é baseada em callbacks. Para solucionar, envolvemos as consultas no fluxo `db.serialize()` executando `BEGIN TRANSACTION`, `COMMIT` ou `ROLLBACK` em promises de forma a garantir a consistência das inserções encadeadas no checkout.
+- **Hash de Senha**: Instalamos `bcryptjs` em JavaScript e `bcrypt` em Python para garantir hashing unidirecional seguro.
+
+---------------------------------------------------------
+
+# Resultados
+
+## Resumo dos Relatórios de Auditoria
+
+| Projeto | CRITICAL | HIGH | MEDIUM | LOW | Total |
+|---|---|---|---|---|---|
+| code-smells-project | 4 | 3 | 3 | 2 | 12 |
+| ecommerce-api-legacy | 3 | 3 | 2 | 1 | 9 |
+
+## Comparação de Estruturas (ecommerce-api-legacy)
+
+**Antes da Refatoração:**
+```
+ecommerce-api-legacy/
+├── package.json
+└── src/
+    ├── app.js
+    ├── AppManager.js
+    └── utils.js
+```
+
+**Depois da Refatoração (Padrão MVC):**
+```
+ecommerce-api-legacy/
+├── .env
+├── .env.example
+├── package.json
+└── src/
+    ├── app.js
+    ├── config.js
+    ├── database.js
+    ├── controllers/
+    │   ├── checkoutController.js
+    │   ├── reportController.js
+    │   └── userController.js
+    ├── middlewares/
+    │   ├── auth.js
+    │   └── errorHandler.js
+    ├── models/
+    │   ├── auditLog.js
+    │   ├── course.js
+    │   ├── enrollment.js
+    │   ├── payment.js
+    │   └── user.js
+    ├── routes/
+    │   ├── checkoutRoutes.js
+    │   ├── reportRoutes.js
+    │   └── userRoutes.js
+    └── utils.js
+```
+
+## Checklist de Validação (ecommerce-api-legacy)
+
+### Fase 1 — Análise
+- [x] Linguagem detectada corretamente (JavaScript/Node.js)
+- [x] Framework detectado corretamente (Express)
+- [x] Domínio da aplicação descrito corretamente (LMS Checkout & Financial Report)
+- [x] Número de arquivos analisados condiz com a realidade (3 arquivos)
+
+### Fase 2 — Auditoria
+- [x] Relatório segue o template definido nos arquivos de referência
+- [x] Cada finding tem arquivo e linhas exatos
+- [x] Findings ordenados por severidade (CRITICAL → LOW)
+- [x] Mínimo de 5 findings identificados (9 findings)
+- [x] Skill pausa e pede confirmação antes da Fase 3
+
+### Fase 3 — Refatoração
+- [x] Estrutura de diretórios segue padrão MVC
+- [x] Configuração extraída para módulo de config (sem hardcoded)
+- [x] Models criados para abstrair dados
+- [x] Views/Routes separadas para visualização ou roteamento
+- [x] Controllers concentram o fluxo da aplicação
+- [x] Error handling centralizado
+- [x] Entry point claro (app.js)
+- [x] Aplicação inicia sem erros
+- [x] Endpoints originais respondem corretamente
+
+---------------------------------------------------------
+
+# Como Executar
+
+## Pré-requisitos
+- Node.js >= 18 instalado
+- NPM instalado
+
+## Passos para Início do Servidor
+
+1. **Acesse o diretório do projeto**:
+   ```bash
+   cd ecommerce-api-legacy
+   ```
+
+2. **Instalar dependências**:
+   ```bash
+   npm install
+   ```
+
+3. **Configurar variáveis de ambiente**:
+   Copie as variáveis do `.env.example`:
+   ```bash
+   cp .env.example .env
+   ```
+   Edite o `.env` se desejar alterar a porta ou chaves secretas.
+
+4. **Executar a aplicação**:
+   ```bash
+   npm start
+   ```
+
+## Validar Endpoints
+
+- **Checkout**:
+  ```bash
+  curl -X POST http://localhost:3000/api/checkout \
+    -H "Content-Type: application/json" \
+    -d '{"usr": "Guilherme", "eml": "gui@fullcycle.com.br", "pwd": "senhaforte", "c_id": 2, "card": "4111222233334444"}'
+  ```
+
+- **Relatório Financeiro** (Requer Token):
+  ```bash
+  curl http://localhost:3000/api/admin/financial-report \
+    -H "Authorization: Bearer fake-jwt-token-1"
+  ```
+
+- **Deletar Usuário** (Requer Token):
+  ```bash
+  curl -X DELETE http://localhost:3000/api/users/999 \
+    -H "Authorization: Bearer fake-jwt-token-1"
+  ```
