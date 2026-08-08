@@ -680,7 +680,7 @@ Esta seção apresenta os resultados obtidos com a refatoração arquitetural pa
   - [x] Proteção das rotas com autenticação Bearer Token funcional.
   - [x] Tratamento de erros centralizado que impede exposição de stack traces de banco.
   - [x] Execução do linter `pyflakes` com zero avisos ou erros.
-- **Observações sobre a Stack:** A refatoração no Flask foi efetuada mapeando a inicialização da aplicação no entrypoint [app.py](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/app.py) e utilizando `Blueprint`s para desacoplar as rotas. A persistência foi migrada do código embutido para funções estruturadas e seguras (utilizando queries parametrizadas `?` do driver `sqlite3`) nos arquivos da pasta [models/](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/models). As regras de negócio foram encapsuladas na camada de [controllers/](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/controllers) e validações extras foram movidas para serviços auxiliares (como [services/notification_service.py](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/services/notification_service.py)). O linter `pyflakes` foi executado e retornou status 0 (limpo de código morto ou imports órfãos).
+- **Observações sobre a Stack:** A refatoração no Flask foi efetuada mapeando a inicialização da aplicação no entrypoint [app.py] e utilizando `Blueprint`s para desacoplar as rotas. A persistência foi migrada do código embutido para funções estruturadas e seguras (utilizando queries parametrizadas `?` do driver `sqlite3`) nos arquivos da pasta [models/]. As regras de negócio foram encapsuladas na camada de [controllers/] e validações extras foram movidas para serviços auxiliares (como [services/notification_service.py]). O linter `pyflakes` foi executado e retornou status 0 (limpo de código morto ou imports órfãos).
 - **Estrutura de Diretórios (Antes vs Depois):**
 
 ```text
@@ -893,6 +893,46 @@ Prints com o funcionamento dos endpoints disponivel em [reports/project-3-prints
 
 ## Como Executar
 
+### Ferramenta Utilizada
+
+Este projeto foi analisado e refatorado com a skill **`refactor-arch`** usando o **Antigravity CLI (Gemini)** — assistente de codificação por linha de comando desenvolvido pelo Google DeepMind que suporta **skills** customizadas para fluxos especializados.
+
+> **Nota:** O enunciado do desafio menciona Claude Code como exemplo de ferramenta. Este repositório utiliza o **Antigravity CLI (Gemini)** como ferramenta equivalente. A skill `refactor-arch` e seus arquivos de referência estão em `.gemini/skills/refactor-arch/` dentro de cada projeto.
+
+### Como executar a skill `refactor-arch`
+
+A skill opera em **3 fases sequenciais**: Análise → Auditoria → Refatoração.
+
+**Pré-requisito:** Antigravity CLI instalado e configurado com uma chave de API Gemini válida.
+
+**Executar em qualquer projeto:**
+
+```bash
+# Entre no diretório do projeto desejado
+cd code-smells-project       # ou ecommerce-api-legacy / task-manager-api
+
+# Inicie o Antigravity CLI
+agy
+
+# No chat, execute o comando da skill
+> execute skill refactor-arch no projeto @<nome-do-projeto>
+```
+
+O agente irá automaticamente:
+- **Fase 1** — detectar stack, mapear arquitetura e imprimir o resumo
+- **Fase 2** — varrer o código contra o catálogo de anti-patterns e gerar `../reports/audit-project-N.md`
+- **⛔ Pausa obrigatória** — exibir o relatório e pedir confirmação antes de modificar qualquer arquivo
+- **Fase 3** — reestruturar o projeto para MVC, validar boot e endpoints (após confirmação)
+
+**Confirmar a Fase 3 quando solicitado:**
+
+```
+Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
+> y
+```
+
+---
+
 ### 1. code-smells-project (Python / Flask)
 
 #### Instalação e Inicialização:
@@ -978,9 +1018,13 @@ python app.py
 As rotas de relatórios exigem autenticação do usuário.
 - **Login:**
   ```bash
-  curl -X POST -H "Content-Type: application/json" -d '{"username": "admin", "password": "admin_password"}' http://localhost:5000/login
+  curl -X POST -H "Content-Type: application/json" -d '{"email": "joao@email.com", "password": "1234"}' http://localhost:5000/login
   ```
-- **Acessar Resumo de Tarefas:**
+- **Acessar Resumo de Tarefas (Admin):**
   ```bash
   curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/reports/summary
+  ```
+- **Listar Tasks:**
+  ```bash
+  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/tasks
   ```
