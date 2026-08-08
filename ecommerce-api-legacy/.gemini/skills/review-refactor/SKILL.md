@@ -94,3 +94,13 @@ Gere um relatório estruturado em markdown e salve-o no diretório `../reports/r
 
 ## 4. Conclusão e Próximos Passos
 ```
+
+## Fase 5 — Atualização do README.md Geral
+
+Após a emissão do relatório, a skill deve obrigatoriamente abrir o arquivo `README.md` localizado na raiz do workspace (`../README.md`) e atualizar as seguintes seções para o projeto em questão:
+
+1. **Seção "Resultados"**:
+   - Adicionar o status da validação e as **Observações sobre como a skill se comportou em stacks diferentes** (descrevendo o comportamento da refatoração na linguagem e framework do projeto analisado).
+2. **Seção "Como Executar"**:
+   - Detalhar as instruções e comandos necessários para rodar e testar a aplicação refatorada (ex: instalação de dependências, variáveis de ambiente necessárias e comandos de inicialização).
+
