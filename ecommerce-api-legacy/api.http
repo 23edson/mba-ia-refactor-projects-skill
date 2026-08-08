@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:3005
+@baseUrl = http://localhost:3000
 
 ### Checkout - sucesso
 POST {{baseUrl}}/api/checkout

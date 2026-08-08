@@ -1,10 +1,8 @@
 from datetime import datetime
 import re
-import os
-import json
-import sys
-import math
-import hashlib
+import logging
+
+logger = logging.getLogger(__name__)
 
 def format_date(date_obj):
     if date_obj:
@@ -34,11 +32,10 @@ def generate_id():
     return str(uuid.uuid4())
 
 def log_action(action, details=None):
-
     timestamp = datetime.utcnow()
-    print(f"[{timestamp}] ACTION: {action}")
+    logger.info(f"[{timestamp}] ACTION: {action}")
     if details:
-        print(f"  DETAILS: {details}")
+        logger.info(f"  DETAILS: {details}")
 
 def parse_date(date_string):
     try:

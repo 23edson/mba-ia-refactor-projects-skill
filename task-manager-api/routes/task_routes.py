@@ -1,11 +1,13 @@
 import logging
 from flask import Blueprint, request, jsonify
 from controllers import task_controller
+from utils.auth import token_required
 
 logger = logging.getLogger(__name__)
 task_bp = Blueprint('tasks', __name__)
 
 @task_bp.route('/tasks', methods=['GET'])
+@token_required
 def get_tasks():
     try:
         result = task_controller.list_tasks()
@@ -15,6 +17,7 @@ def get_tasks():
         return jsonify({'error': 'Erro interno ao listar tasks'}), 500
 
 @task_bp.route('/tasks/<int:task_id>', methods=['GET'])
+@token_required
 def get_task(task_id):
     try:
         data = task_controller.get_task_by_id(task_id)
@@ -26,6 +29,7 @@ def get_task(task_id):
         return jsonify({'error': 'Erro interno ao buscar task'}), 500
 
 @task_bp.route('/tasks', methods=['POST'])
+@token_required
 def create_task():
     data = request.get_json()
     try:
@@ -41,6 +45,7 @@ def create_task():
         return jsonify({'error': 'Erro ao criar task'}), 500
 
 @task_bp.route('/tasks/<int:task_id>', methods=['PUT'])
+@token_required
 def update_task(task_id):
     data = request.get_json()
     try:
@@ -56,6 +61,7 @@ def update_task(task_id):
         return jsonify({'error': 'Erro ao atualizar task'}), 500
 
 @task_bp.route('/tasks/<int:task_id>', methods=['DELETE'])
+@token_required
 def delete_task(task_id):
     try:
         task_controller.delete_task(task_id)
@@ -68,6 +74,7 @@ def delete_task(task_id):
         return jsonify({'error': 'Erro ao deletar task'}), 500
 
 @task_bp.route('/tasks/search', methods=['GET'])
+@token_required
 def search_tasks():
     query = request.args.get('q', '')
     status = request.args.get('status', '')
@@ -82,6 +89,7 @@ def search_tasks():
         return jsonify({'error': 'Erro interno ao buscar tasks'}), 500
 
 @task_bp.route('/tasks/stats', methods=['GET'])
+@token_required
 def task_stats():
     try:
         stats = task_controller.get_stats()

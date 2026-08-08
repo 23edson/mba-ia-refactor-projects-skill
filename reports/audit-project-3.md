@@ -1,136 +1,172 @@
-# Relatório de Auditoria — Projeto 3 (task-manager-api)
-
-```
 ╔══════════════════════════════════════════════════════════════╗
 ║           RELATÓRIO DE AUDITORIA ARQUITETURAL                ║
 ╚══════════════════════════════════════════════════════════════╝
 
 Projeto:    task-manager-api
-Stack:      Python + Flask
-Data:       2026-07-11
+Stack:      Python + Flask 3.0.0 + Flask-SQLAlchemy
+Data:       2026-08-08
 Total de findings: 9
 
 ┌─────────────────────────────────────────────────────────────┐
-│  CRITICAL: 3  │  HIGH: 3  │  MEDIUM: 1  │  LOW: 2  │
+│  CRITICAL: 0  │  HIGH: 2  │  MEDIUM: 3  │  LOW: 4          │
 └─────────────────────────────────────────────────────────────┘
-
-═══════════════════════════════════
- 🔴 CRITICAL
-═══════════════════════════════════
-
-[C-1] Credenciais SMTP Hardcoded (AP-02)
-  Arquivo: services/notification_service.py:9-10
-  Descrição: O e-mail e a senha do Gmail estão expostos diretamente no construtor da classe `NotificationService`.
-  Código:
-    self.email_user = 'taskmanager@gmail.com'
-    self.email_password = 'senha123'
-  Impacto: Comprometimento de credenciais em caso de vazamento ou exposição do código-fonte.
-  Recomendação: Obter as configurações através de variáveis de ambiente (`os.getenv`).
-
-[C-2] Credenciais Hardcoded / Secret Key (AP-02)
-  Arquivo: app.py:13
-  Descrição: A chave secreta do Flask está exposta diretamente no arquivo principal da aplicação.
-  Código:
-    app.config['SECRET_KEY'] = 'super-secret-key-123'
-  Impacto: Permite que atacantes falsifiquem sessões e cookies, comprometendo a segurança da aplicação.
-  Recomendação: Usar variável de ambiente para inicializar `SECRET_KEY`.
-
-[C-3] Senhas em Texto Puro / Criptografia Fraca (AP-03)
-  Arquivo: models/user.py:29-32
-  Descrição: A senha está sendo armazenada e comparada usando o algoritmo hash MD5, que é inseguro e obsoleto.
-  Código:
-    self.password = hashlib.md5(pwd.encode()).hexdigest()
-    return self.password == hashlib.md5(pwd.encode()).hexdigest()
-  Impacto: Senhas vulneráveis a ataques de dicionário e força bruta devido à fragilidade do algoritmo MD5.
-  Recomendação: Substituir MD5 por bcrypt.
 
 ═══════════════════════════════════
  🟠 HIGH
 ═══════════════════════════════════
 
-[H-1] Lógica de Negócio em Controller/Route (AP-05)
-  Arquivo: routes/task_routes.py:30-39
-  Descrição: A verificação de se uma tarefa está atrasada está implementada diretamente no arquivo de rotas, misturando lógica de negócio com a de apresentação/roteamento.
+[H-1] Token JWT Fake — Sem Autenticação Real (AP-06)
+  Arquivo: utils/auth.py:14
+  Descrição: O mecanismo de autenticação usa um token fictício previsível
+  ("fake-jwt-token-<user_id>") sem assinatura criptográfica. Qualquer pessoa
+  que saiba o ID de um usuário pode forjar um token válido.
   Código:
-    if t.due_date:
-        if t.due_date < datetime.utcnow():
-            if t.status != 'done' and t.status != 'cancelled':
-                task_data['overdue'] = True
-  Impacto: Acoplamento de código, impedindo testes de unidade limpos e isolados.
-  Recomendação: Utilizar o método `is_overdue()` do próprio model `Task` e encapsular em um controller.
+    user_id = int(token.replace('Bearer fake-jwt-token-', ''))
+  Impacto: Permite que qualquer usuário forje tokens de outros usuários
+  (inclusive admin), contornando toda a proteção de autenticação da API.
+  Recomendação: Implementar JWT real com PyJWT, assinar com SECRET_KEY e
+  verificar a assinatura antes de confiar no payload.
 
-[H-2] Lógica de Negócio em Controller/Route (AP-05)
-  Arquivo: routes/user_routes.py:61-69
-  Descrição: A validação de formato de e-mail e regras de tamanho mínimo da senha estão expostas na função de tratamento de rotas.
+[H-2] Hard Delete de Categoria sem Verificação de Integridade (AP-11)
+  Arquivo: controllers/category_controller.py:44-48
+  Descrição: A função delete_category remove a categoria diretamente do banco
+  sem verificar se existem tasks associadas a ela.
   Código:
-    if not re.match(r'^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$', email):
-        return jsonify({'error': 'Email inválido'}), 400
-  Impacto: Dificuldade em reutilizar regras de validação em outros endpoints ou comandos.
-  Recomendação: Centralizar a lógica de criação de usuário com validação em um controller de usuários.
-
-[H-3] Sem Autenticação em Rotas Protegidas (AP-06)
-  Arquivo: routes/report_routes.py:12
-  Descrição: O endpoint de relatório `/reports/summary` não exige token de autenticação, permitindo acesso não autorizado.
-  Código:
-    @report_bp.route('/reports/summary', methods=['GET'])
-    def summary_report():
-  Impacto: Acesso irrestrito a dados estratégicos e estatísticas de produtividade dos usuários da aplicação.
-  Recomendação: Implementar um middleware ou decorator de autenticação (JWT) e aplicá-lo nos endpoints de relatórios.
+    def delete_category(cat_id):
+        cat = Category.query.get(cat_id)
+        ...
+        db.session.delete(cat)
+        db.session.commit()
+  Impacto: Tasks com category_id órfão podem causar inconsistência de dados
+  e erros em listagens que fazem joinedload da categoria.
+  Recomendação: Verificar Task.query.filter_by(category_id=cat_id).count()
+  antes de deletar, ou usar ON DELETE SET NULL na FK / soft delete.
 
 ═══════════════════════════════════
  🟡 MEDIUM
 ═══════════════════════════════════
 
-[M-1] N+1 Queries (AP-08)
-  Arquivo: routes/task_routes.py:41-57
-  Descrição: No endpoint `/tasks`, a aplicação faz uma query no banco de dados para buscar o usuário e outra para a categoria correspondente a cada tarefa em um loop `for`.
+[M-1] Uso de Model.query.get() Deprecado (AP-15)
+  Arquivo: controllers/task_controller.py:33, 63, 69, 100, 133, 141, 168
+           controllers/user_controller.py:22, 63, 99, 111
+           controllers/category_controller.py:28, 43
+           controllers/report_controller.py:90
+           utils/auth.py:15
+  Descrição: O método Session.get() substituiu Model.query.get() no
+  SQLAlchemy 2.x. O uso legado de .query.get() gera DeprecationWarning.
   Código:
-    if t.user_id:
-        user = User.query.get(t.user_id)
-    ...
-    if t.category_id:
-        cat = Category.query.get(t.category_id)
-  Impacto: Problemas severos de performance conforme o volume de tarefas cresce (2N + 1 queries).
-  Recomendação: Realizar eager loading (join) ao consultar as tarefas (usando `joinedload` do SQLAlchemy).
+    task = Task.query.get(task_id)
+    user = User.query.get(user_id)
+  Impacto: Quebra de compatibilidade em versões futuras do SQLAlchemy.
+  Recomendação: Substituir por db.session.get(Task, task_id) em todos os
+  arquivos afetados (15 ocorrências no total).
+
+[M-2] Bare Except — Captura Silenciosa de Exceções (AP-10)
+  Arquivo: utils/helpers.py:43, 46
+           controllers/task_controller.py:85, 151
+  Descrição: Uso de bloco `except:` sem especificar o tipo de exceção captura
+  até KeyboardInterrupt e SystemExit, podendo mascarar erros críticos.
+  Código:
+    except:
+        try:
+            return datetime.strptime(date_string, '%d/%m/%Y')
+        except:
+            return None
+  Impacto: Erros inesperados são silenciados, tornando o diagnóstico de
+  problemas em produção extremamente difícil.
+  Recomendação: Substituir `except:` por `except (ValueError, TypeError):` ou
+  a exceção específica esperada.
+
+[M-3] str(e) Exposto em Respostas da API (AP-10)
+  Arquivo: routes/user_routes.py:26, 48, 65, 78, 90, 112
+           routes/task_routes.py:26, 40, 56, 71
+           routes/category_routes.py:34, 50, 62
+           routes/report_routes.py:30
+  Descrição: Erros de ValueError (que contêm mensagens de negócio do
+  controller) são retornados diretamente ao cliente via str(e). Embora
+  ValueError seja controlado neste projeto, o padrão é perigoso pois
+  qualquer exceção não prevista também poderia ser exposta.
+  Código:
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+  Impacto: Vaza detalhes internos do modelo de domínio ao cliente caso
+  uma exceção inesperada seja capturada como ValueError.
+  Recomendação: Para ValueError controlados (mensagens de negócio), o
+  padrão é aceitável. Garantir que nenhum outro tipo de exceção chegue a
+  este bloco adicionando um `except Exception` separado com mensagem genérica.
 
 ═══════════════════════════════════
  🔵 LOW
 ═══════════════════════════════════
 
-[L-1] Console/Print como Logging (AP-13)
-  Arquivo: routes/user_routes.py:83
-  Descrição: Utilização da função global `print()` para registrar eventos de criação e erros, em vez de um logger estruturado.
+[L-1] Funções Utilitárias Sem Uso (AP-16)
+  Arquivo: utils/helpers.py:7, 12, 20, 23, 26, 29, 49, 52
+  Descrição: As funções format_date, calculate_percentage, validate_email,
+  sanitize_string, generate_id, is_valid_color e process_task_data estão
+  definidas em helpers.py mas não são importadas ou chamadas em nenhum
+  outro arquivo do projeto.
   Código:
-    print(f"Usuário criado: {user.id} - {user.name}")
-  Impacto: Falta de padronização, níveis de log, timestamps automáticos e incapacidade de redirecionar logs em ambiente de produção.
-  Recomendação: Importar e utilizar o módulo `logging` padrão do Python.
+    def generate_id():
+        import uuid
+        return str(uuid.uuid4())
+  Impacto: Código morto aumenta a superfície de manutenção e confunde
+  novos contribuidores sobre o que está realmente em uso.
+  Recomendação: Remover as funções não utilizadas ou, se necessário para
+  uso futuro, mover para um módulo utilitário claramente nomeado.
 
-[L-2] Código Não Utilizado / Imports Não Utilizados (AP-16)
-  Arquivo: app.py:7
-  Descrição: Importações desnecessárias de pacotes como `os`, `sys`, `json` no entry point.
+[L-2] type(tags) == list em vez de isinstance (AP-14)
+  Arquivo: utils/helpers.py:100
+  Descrição: A comparação de tipo usa type() == em vez do idiomático isinstance(),
+  que é mais robusto e compatível com subclasses.
   Código:
-    import os, sys, json, datetime
-  Impacto: Aumenta a poluição do código e dificulta a manutenção estática.
-  Recomendação: Remover imports não utilizados e configurar regras de linting para evitar novos casos.
+    if type(tags) == list:
+  Impacto: Falha silenciosa se tags for uma subclasse de list.
+  Recomendação: Substituir por isinstance(tags, list).
+
+[L-3] Senha Mínima de 4 Caracteres (AP-12)
+  Arquivo: controllers/user_controller.py:36
+           seed.py:22,27,32
+  Descrição: A regra de negócio exige apenas 4 caracteres para a senha,
+  e o seed usa senhas de 4 letras ('1234', 'abcd', 'pass').
+  Código:
+    if len(password) < 4:
+        raise ValueError('Senha deve ter no mínimo 4 caracteres')
+  Impacto: Vulnerabilidade a ataques de força bruta.
+  Recomendação: Aumentar para mínimo de 8 caracteres e exigir complexidade
+  (letras + números), mesmo em ambiente de desenvolvimento.
+
+[L-4] Lógica Duplicada de Validação de Status e Prioridade (AP-09)
+  Arquivo: controllers/task_controller.py:54, 58, 120, 126
+           models/task.py:44, 49
+  Descrição: As validações de status válidos e intervalo de prioridade estão
+  implementadas tanto no controller quanto como métodos no model (validate_status,
+  validate_priority), mas os métodos do model nunca são chamados.
+  Código:
+    # Em task_controller.py:54
+    if status not in ['pending', 'in_progress', 'done', 'cancelled']:
+    # Em models/task.py:44 (nunca chamado)
+    def validate_status(self, new_status):
+        valid = ['pending', 'in_progress', 'done', 'cancelled']
+  Impacto: Inconsistência de manutenção — alterar a lista de status válidos
+  exige atualizar dois lugares.
+  Recomendação: Usar apenas os métodos do model ou centralizar as constantes
+  em utils/helpers.py (VALID_STATUSES já está lá mas também não é usado).
 
 ═══════════════════════════════════
  RESUMO DE AÇÕES NECESSÁRIAS
 ═══════════════════════════════════
 
-CRITICAL (corrigir antes de qualquer deploy):
-  - [ ] Mover as credenciais SMTP de `NotificationService` para variáveis de ambiente [C-1]
-  - [ ] Mover a `SECRET_KEY` de `app.py` para variáveis de ambiente [C-2]
-  - [ ] Substituir algoritmo MD5 de hash de senha de usuários por bcrypt [C-3]
-
 HIGH (corrigir nesta sprint):
-  - [ ] Reutilizar método `is_overdue()` do model `Task` e encapsular a lógica no controller [H-1]
-  - [ ] Mover validação de dados de cadastro de rotas para o controller de usuário [H-2]
-  - [ ] Proteger endpoints de relatórios com autenticação baseada em token [H-3]
+  - [ ] [H-1] Implementar JWT real com PyJWT substituindo o fake-jwt-token.
+  - [ ] [H-2] Verificar tasks associadas antes de deletar categoria.
 
 MEDIUM (planejar para próxima sprint):
-  - [ ] Otimizar listagem de tarefas com `joinedload` para evitar N+1 queries [M-1]
+  - [ ] [M-1] Substituir Model.query.get() por db.session.get() em 15 ocorrências.
+  - [ ] [M-2] Substituir bare `except:` por exceções específicas (4 ocorrências).
+  - [ ] [M-3] Garantir que apenas ValueError de negócio é exposto via str(e).
 
 LOW (melhorias incrementais):
-  - [ ] Substituir o uso de `print` por módulo `logging` estruturado [L-1]
-  - [ ] Limpar importações não utilizadas de `app.py` e demais arquivos [L-2]
-```
+  - [ ] [L-1] Remover ou usar as 7 funções utilitárias sem uso em helpers.py.
+  - [ ] [L-2] Substituir type(tags) == list por isinstance(tags, list).
+  - [ ] [L-3] Aumentar senha mínima de 4 para 8 caracteres.
+  - [ ] [L-4] Centralizar validações de status/prioridade e remover duplicação.

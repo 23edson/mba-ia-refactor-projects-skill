@@ -1,14 +1,18 @@
 import smtplib
 import os
+import logging
 from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
 
 class NotificationService:
     def __init__(self):
         self.notifications = []
-        self.email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        self.email_port = int(os.getenv('EMAIL_PORT', '587'))
-        self.email_user = os.getenv('EMAIL_USER', 'taskmanager@gmail.com')
-        self.email_password = os.getenv('EMAIL_PASSWORD', 'senha123')
+        self.email_host = os.getenv('EMAIL_HOST')
+        self.email_port = int(os.getenv('EMAIL_PORT', 0))
+        self.email_user = os.getenv('EMAIL_USER')
+        self.email_password = os.getenv('EMAIL_PASSWORD')
 
     def send_email(self, to, subject, body):
         try:
@@ -19,22 +23,26 @@ class NotificationService:
             message = f"Subject: {subject}\n\n{body}"
             server.sendmail(self.email_user, to, message)
             server.quit()
-            print(f"Email enviado para {to}")
+            logger.info(f"Email enviado para {to}")
             return True
         except Exception as e:
-            print(f"Erro ao enviar email: {str(e)}")
+            logger.error(f"Erro ao enviar email: {str(e)}")
             return False
+
+
 
     def notify_task_assigned(self, user, task):
         subject = f"Nova task atribuída: {task.title}"
         body = f"Olá {user.name},\n\nA task '{task.title}' foi atribuída a você.\n\nPrioridade: {task.priority}\nStatus: {task.status}"
         self.send_email(user.email, subject, body)
+        timestamp = datetime.utcnow()
         self.notifications.append({
             'type': 'task_assigned',
             'user_id': user.id,
             'task_id': task.id,
-            'timestamp': datetime.utcnow()
+            'timestamp': timestamp
         })
+        logger.info(f"[{timestamp}] ACTION: task_assigned")
 
     def notify_task_overdue(self, user, task):
         subject = f"Task atrasada: {task.title}"

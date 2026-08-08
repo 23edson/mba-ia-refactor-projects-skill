@@ -68,7 +68,7 @@ def health_check():
             "debug": config.DEBUG
             # Removido "secret_key" para evitar vazamento de credencial (C-2 / AP-02)
         }), 200
-    except Exception as e:
+    except Exception:
         return jsonify({"status": "erro", "detalhes": "Não foi possível conectar ao banco de dados"}), 500
 
 @app.route("/admin/reset-db", methods=["POST"])

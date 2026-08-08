@@ -1,11 +1,13 @@
 import logging
 from flask import Blueprint, request, jsonify
 from controllers import user_controller
+from utils.auth import token_required
 
 logger = logging.getLogger(__name__)
 user_bp = Blueprint('users', __name__)
 
 @user_bp.route('/users', methods=['GET'])
+@token_required
 def get_users():
     try:
         result = user_controller.list_users()
@@ -15,6 +17,7 @@ def get_users():
         return jsonify({'error': 'Erro interno ao listar usuários'}), 500
 
 @user_bp.route('/users/<int:user_id>', methods=['GET'])
+@token_required
 def get_user(user_id):
     try:
         data = user_controller.get_user_by_id(user_id)
@@ -26,6 +29,7 @@ def get_user(user_id):
         return jsonify({'error': 'Erro interno ao buscar usuário'}), 500
 
 @user_bp.route('/users', methods=['POST'])
+@token_required
 def create_user():
     data = request.get_json()
     if not data:
@@ -47,6 +51,7 @@ def create_user():
         return jsonify({'error': 'Erro ao criar usuário'}), 500
 
 @user_bp.route('/users/<int:user_id>', methods=['PUT'])
+@token_required
 def update_user(user_id):
     data = request.get_json()
     if not data:
@@ -63,6 +68,7 @@ def update_user(user_id):
         return jsonify({'error': 'Erro ao atualizar usuário'}), 500
 
 @user_bp.route('/users/<int:user_id>', methods=['DELETE'])
+@token_required
 def delete_user(user_id):
     try:
         user_controller.delete_user(user_id)
@@ -75,6 +81,7 @@ def delete_user(user_id):
         return jsonify({'error': 'Erro ao deletar usuário'}), 500
 
 @user_bp.route('/users/<int:user_id>/tasks', methods=['GET'])
+@token_required
 def get_user_tasks(user_id):
     try:
         result = user_controller.get_user_tasks(user_id)

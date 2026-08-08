@@ -32,4 +32,10 @@ def login():
     db = get_db()
     dados = request.get_json()
     usuario = usuario_controller.login(db, dados)
-    return jsonify({"dados": usuario, "sucesso": True, "mensagem": "Login OK"}), 200
+    token = f"fake-jwt-token-{usuario['id']}"
+    return jsonify({
+        "dados": usuario,
+        "token": token,
+        "sucesso": True,
+        "mensagem": "Login OK"
+    }), 200

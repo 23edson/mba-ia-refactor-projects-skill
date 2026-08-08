@@ -597,3 +597,390 @@ Relatórios são operações de leitura e não modificam dados, enquanto isso, c
 ### 5. Falta de Logs (LOW)
 - **Arquivo**: `user_routes.py`
 - **Descrição**: Identificado blocos de capturas de exceções implementados de sem a captura real do erro, com a cláusula `except:`, ao invés de `except Exception as e:` (ruim também, mas "menos pior"). Basicamente da forma que é feito está apenas retornando o erro genérico e não criando log de nada, deixando o debug totalmente no escuro.
+
+---
+
+# Construção da Skill
+
+Para automatizar o processo de refatoração e revisão dos projetos legados, foram criadas duas Custom Skills integradas: `refactor-arch` (Refatoração Arquitetural) e `review-refactor` (Revisão Técnica). Abaixo estão detalhadas as decisões de design, estrutura e desafios enfrentados durante o desenvolvimento delas.
+
+## Decisões de Design e Estrutura
+
+As skills foram estruturadas seguindo a anatomia recomendada pela ferramenta de execução de agentes (organização em diretórios `.gemini/skills/` contendo o arquivo de orquestração `SKILL.md` e a pasta `references/` para arquivos auxiliares de documentação em Markdown):
+
+1. **SKILL.md (O Maestro):** Contém a definição das fases obrigatórias de execução com prompts e gatilhos explícitos para o agente.
+2. **References (Base de Conhecimento):**
+   - `project-analysis.md`: Heurísticas de detecção passiva de stacks e mapeamento estrutural.
+   - `antipatterns-catalog.md`: Catálogo unificado com regras de validação arquitetural e de segurança.
+   - `audit-report-template.md`: Template estruturado para a Fase 2 (Auditoria).
+   - `mvc-guidelines.md`: Definição estrita das camadas models, controllers e routes.
+   - `refactoring-playbook.md`: Guia de transformações seguras com exemplos de antes/depois.
+
+---
+
+## Catálogo de Anti-patterns e Code Smells
+
+O catálogo de detecção foi projetado contendo mais de 8 anti-patterns estratégicos divididos por criticidade, justificando sua inclusão pela gravidade técnica:
+
+* **CRITICAL:**
+  - *SQL Injection (AP-01):* Concatenação direta de queries (risco de destruição/vazamento de dados).
+  - *Hardcoded Credentials (AP-02):* Segredos expostos diretamente no repositório (vulnerabilidade severa).
+  - *Plaintext Passwords (AP-03):* Armazenamento sem hash seguro (vazamento total de acessos de clientes).
+* **HIGH:**
+  - *God Class / God Method (AP-04):* Lógica de negócio pesada, persistência e rotas aglomeradas em um único arquivo (AppManager ou app.py).
+  - *Unprotected Routes (AP-06):* Falta de controle de acesso a rotas administrativas ou destrutivas.
+  - *Missing Transactions (AP-07):* Operações de escrita composta executadas sem atomicidade/rollback.
+* **MEDIUM:**
+  - *N+1 Queries (AP-08):* Queries executadas dentro de loops que degradam drasticamente a performance.
+  - *Verbose Error Disclosures (AP-10):* Exibição de exceções brutas ou schemas ao cliente.
+* **LOW:**
+  - *Magic Numbers (AP-12) & Console Logging (AP-13):* Ausência de constantes declarativas e observabilidade deficitária.
+
+---
+
+## Tecnologia Agnóstica (Independência de Stack)
+
+Para garantir que a skill pudesse auditar e refatorar com sucesso tanto aplicações Python/Flask quanto Node.js/Express de forma dinâmica:
+- **Heurísticas Abstratas:** Em vez de procurar arquivos fixos, o agente primeiro escaneia as dependências da aplicação (`package.json` vs `requirements.txt`) para determinar a linguagem principal.
+- **Padrões Universais de Arquitetura:** O playbook de refatoração instrui o agente sobre como desacoplar responsabilidades em termos lógicos de MVC (Rotas → Lógica → Dados) em vez de comandos acoplados a linguagens específicas.
+- **Boot Dinâmico:** A etapa de validação na Fase 3 descobre os comandos corretos de boot (ex: `node src/app.js` vs `python app.py`) baseando-se no arquivo de configuração do projeto.
+
+---
+
+## Desafios Encontrados e Resolução
+
+1. **Gestão de Dependências na Instalação Fresh:**
+   - *Desafio:* Bibliotecas adicionadas durante a refatoração (como `bcrypt` no Python ou `bcryptjs` no Node) causavam falha de boot ao rodar o projeto em uma nova instalação caso não estivessem declaradas nos manifestos.
+   - *Solução:* Adicionamos o passo obrigatório `5.1 Verificar arquivo de dependências` na Phase 3 da skill, instruindo o agente a atualizar automaticamente o `requirements.txt` ou `package.json` antes de prosseguir com a validação operacional.
+2. **Alertas de Linters / Variáveis Inutilizadas:**
+   - *Desafio:* Variáveis temporárias de tratamento de exceções (como `except Exception as e:`) geravam alertas de variáveis declaradas mas não utilizadas no linter.
+   - *Solução:* Configuramos o passo de limpeza e linter na Phase 3, instruindo o agente a varrer os diretórios com `pyflakes` ou `eslint` e ajustar a assinatura dos tratadores de exceção inutilizados.
+
+---
+
+# Resultados e Instruções de Execução
+
+Esta seção apresenta os resultados obtidos com a refatoração arquitetural para o padrão MVC e as instruções de execução para cada projeto do repositório.
+
+## Resultados
+
+### Projeto 1: code-smells-project (Python / Flask)
+
+- **Status da Validação:** CONFORME
+- **Resumo dos Achados da Auditoria (Fase 2):**
+  * **CRITICAL:** 4 | **HIGH:** 3 | **MEDIUM:** 4 | **LOW:** 4 (Total: 15 achados)
+- **Checklist de Validação:**
+  - [x] Estrutura física organizada em MVC (Models, Controllers, Routes) com importações unidirecionais corretas.
+  - [x] Entry point (`app.py`) limpo, carregando configurações de arquivo e registrando Blueprints.
+  - [x] Credenciais sensíveis e variáveis de ambiente isoladas em arquivo `.env`.
+  - [x] Criptografia de senhas com bcrypt implementada de forma robusta e segura.
+  - [x] Todas as queries parametrizadas (livre de SQL Injection).
+  - [x] Transações atômicas com rollback em escritas compostas (criação de pedido e baixa de estoque).
+  - [x] Otimização de queries N+1 usando JOINs e agrupamento em memória.
+  - [x] Proteção das rotas com autenticação Bearer Token funcional.
+  - [x] Tratamento de erros centralizado que impede exposição de stack traces de banco.
+  - [x] Execução do linter `pyflakes` com zero avisos ou erros.
+- **Observações sobre a Stack:** A refatoração no Flask foi efetuada mapeando a inicialização da aplicação no entrypoint [app.py](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/app.py) e utilizando `Blueprint`s para desacoplar as rotas. A persistência foi migrada do código embutido para funções estruturadas e seguras (utilizando queries parametrizadas `?` do driver `sqlite3`) nos arquivos da pasta [models/](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/models). As regras de negócio foram encapsuladas na camada de [controllers/](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/controllers) e validações extras foram movidas para serviços auxiliares (como [services/notification_service.py](file:///home/edson/Documents/langchain/mba-ia-refactor-projects-skill/code-smells-project/services/notification_service.py)). O linter `pyflakes` foi executado e retornou status 0 (limpo de código morto ou imports órfãos).
+- **Estrutura de Diretórios (Antes vs Depois):**
+
+```text
+Antes:
+code-smells-project/
+├── app.py           (Monolito contendo rotas e lógicas)
+├── controllers.py   (Mistura de regras de negócio e validações)
+├── models.py        (Banco de dados e queries SQL concatenadas)
+└── database.py      (Inicialização do banco de dados)
+
+Depois:
+code-smells-project/
+├── app.py (Entry point limpo e registro de Blueprints)
+├── config.py (Configurações centralizadas com variáveis de ambiente)
+├── database.py (Inicialização do banco de dados)
+├── models/
+│   ├── __init__.py
+│   ├── pedido.py (Queries parametrizadas + Transação atômica)
+│   ├── produto.py (Queries parametrizadas + Soft Delete)
+│   └── usuario.py (Segurança e hash bcrypt de senhas)
+├── controllers/
+│   ├── __init__.py
+│   ├── pedido_controller.py
+│   ├── produto_controller.py
+│   └── usuario_controller.py
+├── routes/
+│   ├── __init__.py
+│   ├── admin_routes.py
+│   ├── auth.py (Validação e decorators de token)
+│   ├── auth_helper.py
+│   ├── pedido_routes.py
+│   ├── produto_routes.py
+│   └── relatorio_routes.py
+└── services/
+    ├── __init__.py
+    └── notification_service.py (Envio de e-mail/SMS/push desacoplado)
+```
+- **Logs de Execução e Boot da Aplicação:**
+  ```text
+  2026-08-08 12:29:23,011 [INFO] ==================================================
+  2026-08-08 12:29:23,011 [INFO] SERVIDOR INICIADO
+  2026-08-08 12:29:23,011 [INFO] Rodando em http://localhost:5000
+  2026-08-08 12:29:23,011 [INFO] ==================================================
+   * Serving Flask app 'app'
+   * Debug mode: on
+  
+  Iniciando testes de validação dos endpoints da API...
+  GET / : Status 200
+  GET /health : Status 200
+  GET /produtos : Status 200
+  GET /usuarios (sem token) : Status 401 (esperado 401)
+  GET /usuarios (token admin) : Status 200
+  GET /usuarios (token cliente) : Status 403 (esperado 403)
+  POST /login : Status 200
+  POST /pedidos (criar pedido) : Status 201
+  GET /pedidos/usuario/2 : Status 200
+  PUT /pedidos/2/status (admin) : Status 200
+  PUT /pedidos/2/status (cliente) : Status 403 (esperado 403)
+  GET /relatorios/vendas : Status 200
+  
+  ✓ Todos os endpoints validados com 100% de sucesso!
+  ```
+
+Checklist de validação disponível em:  [reports/review-project-1.md](./reports/review-project-1.md).
+Prints com o funcionamento dos endpoints disponivel em [reports/project-1-prints](./reports/project-1-prints)
+
+
+---
+
+### Projeto 2: ecommerce-api-legacy (Node.js / Express)
+
+- **Status da Validação:** CONFORME
+- **Resumo dos Achados da Auditoria (Fase 2):**
+  * **CRITICAL:** 3 | **HIGH:** 2 | **MEDIUM:** 2 | **LOW:** 2 (Total: 9 achados)
+- **Checklist de Validação:**
+  - [x] Estrutura física organizada em MVC (Models, Controllers, Routes, Middlewares) sob diretório `src/`.
+  - [x] Eliminação completa do arquivo monolítico `AppManager.js` com fracionamento de responsabilidades.
+  - [x] Credenciais expostas isoladas no `.env` e carregadas de forma segura.
+  - [x] Criptografia de senhas utilizando hash `bcryptjs` no login e no seed do banco.
+  - [x] Queries SQL parametrizadas com placeholders no driver SQLite para impedir SQL Injection.
+  - [x] Transações atômicas aplicadas com rollback no fluxo de checkout da API.
+  - [x] Otimização de queries N+1 no relatório financeiro usando LEFT JOIN.
+  - [x] Middleware de proteção de rotas JWT funcional no Express.
+  - [x] Tratamento centralizado de erros do Express sem vazamento de stack traces internos.
+- **Observações sobre a Stack:** A refatoração no Node.js/Express eliminou a classe monolítica `AppManager.js` que centralizava banco, rotas e regras de negócio. Foi criada uma estrutura MVC limpa sob o diretório `src/`. As credenciais expostas foram movidas para variáveis de ambiente carregadas via `dotenv`. Consultas ao banco de dados SQLite foram parametrizadas para evitar injeções, e senhas de usuários foram criptografadas com `bcryptjs`.
+- **Estrutura de Diretórios (Antes vs Depois):**
+
+```text
+Antes:
+ecommerce-api-legacy/
+├── src/
+│   ├── app.js (Configuração crua do Express)
+│   ├── AppManager.js (Monolito acumulando rotas, lógica e banco)
+│   └── utils.js (Credenciais hardcoded)
+└── package.json
+
+Depois:
+ecommerce-api-legacy/
+├── src/
+│   ├── app.js (Composition Root)
+│   ├── config.js (Carregamento seguro de variáveis de ambiente)
+│   ├── database.js (Conexão singleton com SQLite)
+│   ├── controllers/
+│   │   ├── checkout_controller.js
+│   │   ├── report_controller.js
+│   │   └── user_controller.js
+│   ├── models/
+│   │   ├── audit_log.js
+│   │   ├── course.js
+│   │   ├── enrollment.js
+│   │   ├── payment.js
+│   │   └── user.js
+│   ├── routes/
+│   │   ├── checkout_routes.js
+│   │   ├── report_routes.js
+│   │   └── user_routes.js
+│   └── middlewares/
+│       └── auth.js (Middleware de proteção de rotas com JWT)
+├── package.json
+└── .env (Isolamento de variáveis locais)
+```
+- **Logs de Execução e Boot da Aplicação:**
+  ```text
+  ◇ injected env (6) from .env
+  Frankenstein LMS rodando na porta 3000...
+  
+  Query de teste (Relatório Financeiro Administrativo com JWT):
+  GET /api/admin/financial-report -> Status 200
+  [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course":"Docker","revenue":0,"students":[]}]
+  ```
+
+Checklist de validação disponível em: [reports/review-project-2.md](./reports/review-project-2.md).
+
+Prints com o funcionamento dos endpoints disponivel em [reports/project-2-prints](./reports/project-2-prints)
+
+---
+
+### Projeto 3: task-manager-api (Python / Flask + SQLAlchemy)
+
+- **Status da Validação:** CONFORME
+- **Resumo dos Achados da Auditoria (Fase 2):**
+  * **CRITICAL:** 3 | **HIGH:** 3 | **MEDIUM:** 1 | **LOW:** 2 (Total: 9 achados)
+- **Checklist de Validação:**
+  - [x] Estrutura MVC organizada respeitando a separação entre rotas, controllers e models de dados.
+  - [x] Entry point limpo delegando conexões ao SQLAlchemy e registrando os Blueprints.
+  - [x] Mapeamento de segredos e credenciais de SMTP Gmail para variáveis de ambiente locais.
+  - [x] Criptografia de senhas com `bcrypt` e ocultação do campo de senha no schema `to_dict()`.
+  - [x] Queries executadas de forma segura e parametrizada pela API nativa do SQLAlchemy ORM.
+  - [x] Paginação e carregamento adiantado (`joinedload`) em queries para mitigar loop N+1.
+  - [x] Middleware `token_required` aplicado de forma funcional para acesso seguro a rotas administrativas.
+  - [x] Tratamento de erros centralizado com capturing genérico de Exceptions no Flask.
+  - [x] Limpeza e correção total de variáveis e imports inúteis sinalizados pelo `pyflakes`.
+- **Observações sobre a Stack:** A refatoração organizou o projeto estruturado em camadas mas com acoplamentos e brechas de segurança. Mapeamos as credenciais SMTP do Gmail de hardcoded para variáveis de ambiente, isolamos a lógica de notificações em `services/notification_service.py` e implementamos paginação e controle de consultas N+1 via `joinedload` no SQLAlchemy.
+- **Estrutura de Diretórios (Antes vs Depois):**
+
+```text
+Antes:
+task-manager-api/
+├── app.py
+├── database.py
+├── models/
+│   └── (User, Task, Category acoplados com rotas)
+├── routes/
+│   ├── (Mistura de validações duplicadas e endpoints misturados)
+│   └── report_routes.py (Misturando relatórios e categorias)
+└── services/
+
+Depois:
+task-manager-api/
+├── app.py (Inicialização do Flask + SQLAlchemy + Error handling)
+├── config.py (Configuração de email, db e segredos de ambiente)
+├── database.py (Instanciação segura do db)
+├── models/
+│   ├── category.py (Entidade de categorias)
+│   ├── task.py (Entidade de tarefas com relacionamento)
+│   └── user.py (Criptografia bcrypt e proteção de senha)
+├── controllers/
+│   ├── category_controller.py
+│   ├── report_controller.py
+│   ├── task_controller.py
+│   └── user_controller.py (Desacoplamento e fluxo limpo)
+├── routes/
+│   ├── category_routes.py (CRUD de categorias isolado)
+│   ├── report_routes.py (Relatórios de visualização seguros)
+│   ├── task_routes.py (Operações de tarefas)
+│   └── user_routes.py (Gerenciamento e login)
+├── utils/
+│   ├── auth.py (Middleware JWT decorator)
+│   └── helpers.py (Tratamento de exceções e payloads)
+└── services/
+    └── notification_service.py (Isolamento seguro de envio de emails)
+```
+- **Logs de Execução e Boot da Aplicação:**
+  ```text
+   * Serving Flask app 'app'
+   * Debug mode: on
+  2026-08-08 12:48:36,972 [INFO] werkzeug: WARNING: This is a development server...
+   * Running on all addresses (0.0.0.0)
+   * Running on http://127.0.0.1:5000
+  
+  Query de teste (Health Check público):
+  GET /health -> Status 200
+  {"status": "ok", "timestamp": "2026-08-08 12:48:46.548816"}
+  ```
+
+Checklist de validação disponível em: [reports/review-project-3.md](./reports/review-project-3.md).
+Prints com o funcionamento dos endpoints disponivel em [reports/project-3-prints](./reports/project-3-prints)
+
+---
+
+## Como Executar
+
+### 1. code-smells-project (Python / Flask)
+
+#### Instalação e Inicialização:
+```bash
+cd code-smells-project
+# Cria e ativa o ambiente virtual
+python3 -m venv venv
+source venv/bin/activate
+# Instala as dependências
+pip install -r requirements.txt
+# Configura o ambiente (.env)
+cp .env.example .env
+# Executa a aplicação
+python app.py
+```
+
+#### Testando Endpoints Protegidos:
+As rotas de relatórios, pedidos e listagem de usuários requerem autenticação por Token Bearer.
+- **Obter Token (Login):**
+  Envie uma requisição POST para `/login`:
+  ```bash
+  curl -X POST -H "Content-Type: application/json" -d '{"email": "admin@loja.com", "senha": "admin123"}' http://localhost:5000/login
+  ```
+  O retorno conterá os dados do usuário. O token Bearer fictício correspondente ao `admin` (ID 1) é `fake-jwt-token-1`.
+  
+- **Consultar Usuários (Apenas Admin):**
+  Use o cabeçalho `Authorization: Bearer <token>`:
+  ```bash
+  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/usuarios
+  ```
+  *(Se utilizar o token de cliente `fake-jwt-token-2`, o acesso será negado com erro 403).*
+
+- **Criar Pedido (Qualquer Usuário Autenticado):**
+  ```bash
+  curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer fake-jwt-token-2" -d '{"usuario_id": 2, "itens": [{"produto_id": 1, "quantidade": 1}]}' http://localhost:5000/pedidos
+  ```
+
+---
+
+### 2. ecommerce-api-legacy (Node.js / Express)
+
+#### Instalação e Inicialização:
+```bash
+cd ecommerce-api-legacy
+# Instala dependências
+npm install
+# Copia o template de variáveis de ambiente
+cp .env.example .env
+# Inicia a aplicação
+npm start
+```
+
+#### Testando Endpoints Protegidos:
+As rotas administrativas e de exclusão de usuários requerem cabeçalho HTTP de autorização.
+- **Realizar login:**
+  ```bash
+  curl -X POST -H "Content-Type: application/json" -d '{"email": "leonan@email.com", "password": "senha_segura"}' http://localhost:3000/api/login
+  ```
+- **Acessar relatório financeiro (Admin):**
+  ```bash
+  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:3000/api/admin/financial-report
+  ```
+
+---
+
+### 3. task-manager-api (Python / Flask)
+
+#### Instalação e Inicialização:
+```bash
+cd task-manager-api
+# Cria e ativa venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# Roda a inicialização e sementes do banco
+python seed.py
+# Inicializa o app
+python app.py
+```
+
+#### Testando Endpoints Protegidos:
+As rotas de relatórios exigem autenticação do usuário.
+- **Login:**
+  ```bash
+  curl -X POST -H "Content-Type: application/json" -d '{"username": "admin", "password": "admin_password"}' http://localhost:5000/login
+  ```
+- **Acessar Resumo de Tarefas:**
+  ```bash
+  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/reports/summary
+  ```

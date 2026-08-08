@@ -1,5 +1,5 @@
 import logging
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, g
 from controllers import report_controller
 from utils.auth import token_required
 
@@ -9,6 +9,8 @@ report_bp = Blueprint('reports', __name__)
 @report_bp.route('/reports/summary', methods=['GET'])
 @token_required
 def summary_report():
+    if not g.current_user.is_admin():
+        return jsonify({'error': 'Acesso negado'}), 403
     try:
         report = report_controller.get_summary_report()
         return jsonify(report), 200
@@ -19,6 +21,8 @@ def summary_report():
 @report_bp.route('/reports/user/<int:user_id>', methods=['GET'])
 @token_required
 def user_report(user_id):
+    if not g.current_user.is_admin():
+        return jsonify({'error': 'Acesso negado'}), 403
     try:
         report = report_controller.get_user_report(user_id)
         return jsonify(report), 200

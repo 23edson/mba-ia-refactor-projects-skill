@@ -90,10 +90,10 @@ def seed_data():
             db.session.add(t)
 
         db.session.commit()
-        print("Seed concluído com sucesso!")
-        print(f"  {User.query.count()} usuários")
-        print(f"  {Category.query.count()} categorias")
-        print(f"  {Task.query.count()} tasks")
+        logger.info("Seed concluído com sucesso!")
+        logger.info(f"  {User.query.count()} usuários")
+        logger.info(f"  {Category.query.count()} categorias")
+        logger.info(f"  {Task.query.count()} tasks")
 
 if __name__ == '__main__':
     seed_data()
