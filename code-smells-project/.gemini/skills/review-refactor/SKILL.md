@@ -100,7 +100,12 @@ Gere um relatório estruturado em markdown e salve-o no diretório `../reports/r
 Após a emissão do relatório, a skill deve obrigatoriamente abrir o arquivo `README.md` localizado na raiz do workspace (`../README.md`) e atualizar as seguintes seções para o projeto em questão:
 
 1. **Seção "Resultados"**:
+   - **(OBRIGATÓRIO)** Adicionar a comparação detalhada de "antes vs depois" da estrutura de arquivos e diretórios do projeto refatorado.
    - Adicionar o status da validação e as **Observações sobre como a skill se comportou em stacks diferentes** (descrevendo o comportamento da refatoração na linguagem e framework do projeto analisado).
+   - **(OBRIGATÓRIO)** Adicionar um link explícito apontando para o arquivo de relatório de revisão correspondente (ex: "Mais detalhes no arquivo [reports/review-project-N.md](../reports/review-project-N.md)", onde N é o índice do projeto).
+
 2. **Seção "Como Executar"**:
    - Detalhar as instruções e comandos necessários para rodar e testar a aplicação refatorada (ex: instalação de dependências, variáveis de ambiente necessárias e comandos de inicialização).
+   - **(OBRIGATÓRIO)** Detalhar de forma explícita e detalhada como testar os endpoints protegidos, fornecendo exemplos práticos de chamadas (ex: curl ou requisições HTTP) e indicando como obter e passar o token de autenticação nos cabeçalhos (ex: `Authorization: Bearer fake-jwt-token-1`), prevenindo erros de acesso não autorizado (401/403) pelo usuário.
+
 
