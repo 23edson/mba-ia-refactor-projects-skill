@@ -655,7 +655,7 @@ Para garantir que a skill pudesse auditar e refatorar com sucesso tanto aplicaç
 2. **Alertas de Linters / Variáveis Inutilizadas:**
    - *Desafio:* Variáveis temporárias de tratamento de exceções (como `except Exception as e:`) geravam alertas de variáveis declaradas mas não utilizadas no linter.
    - *Solução:* Configuramos o passo de limpeza e linter na Phase 3, instruindo o agente a varrer os diretórios com `pyflakes` ou `eslint` e ajustar a assinatura dos tratadores de exceção inutilizados.
-3. **Revisão e Ajustes Baseados em Feedback (feedback.md):**
+3. **Revisão e Ajustes Baseados em Feedback**
    - *Desafio:* O feedback técnico apontou que a refatoração original falhava ao não implementar a validação de JWT assinado real (mantendo o mock de string de teste `fake-jwt-token-`) e por realizar exclusão direta de categorias sem validação de integridade referencial com tarefas associadas.
    - *Solução:* Reforçamos o playbook de refatoração com padrões seguros de validação de JWTs criptográficos assinados via `PyJWT` (Python) e `jsonwebtoken` (Node.js), além de regras de verificação preventiva antes de operações destrutivas. Atualizamos e re-executamos as fases em todos os projetos para garantir a resolução completa de todos os apontamentos da auditoria.
 
