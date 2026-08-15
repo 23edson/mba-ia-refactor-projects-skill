@@ -1,4 +1,4 @@
-module.exports = (err, req, res, next) => {
+module.exports = (err, req, res, _next) => {
     if (err.name === 'ValidationError' || err.name === 'PaymentError') {
         return res.status(400).json({ erro: err.message });
     }

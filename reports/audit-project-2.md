@@ -1,13 +1,10 @@
-# Relatório de Auditoria — ecommerce-api-legacy
-
-```
 ╔══════════════════════════════════════════════════════════════╗
 ║           RELATÓRIO DE AUDITORIA ARQUITETURAL                ║
 ╚══════════════════════════════════════════════════════════════╝
 
 Projeto:    ecommerce-api-legacy
 Stack:      JavaScript/Node.js + Express
-Data:       2026-07-11
+Data:       2026-08-15
 Total de findings: 9
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -159,4 +156,3 @@ MEDIUM (planejar para próxima sprint):
 LOW (melhorias incrementais):
   - [ ] Renomear variáveis curtas de checkout para nomes autoexplicativos [L-1]
   - [ ] Assegurar conformidade com APIs não-deprecated de Buffer [L-2]
-```

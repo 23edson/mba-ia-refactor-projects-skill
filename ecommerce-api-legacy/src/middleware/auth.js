@@ -24,7 +24,7 @@ const tokenRequired = async (req, res, next) => {
         
         req.user = user;
         next();
-    } catch (err) {
+    } catch {
         res.status(401).json({ erro: 'Token inválido ou expirado' });
     }
 };

@@ -27,7 +27,8 @@ async function login(email, password) {
 
     const token = jwt.sign({ userId: user.id }, config.secretKey, { expiresIn: '24h' });
     
-    const { pass, ...userWithoutPass } = user;
+    const userWithoutPass = { ...user };
+    delete userWithoutPass.pass;
 
     return {
         user: userWithoutPass,
