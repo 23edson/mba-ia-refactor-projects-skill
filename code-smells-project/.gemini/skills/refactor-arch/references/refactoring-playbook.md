@@ -573,6 +573,82 @@ def setup_db():
 
 ---
 
+---
+
+## PT-14 — Redirecionar Acesso a Banco de Middlewares para o Controller (AP-17)
+
+**Python — Antes (Acessando o Model diretamente no middleware/decorator):**
+```python
+# routes/auth_helper.py
+from database import get_db
+from models import usuario as usuario_model
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # ...
+        db = get_db()
+        # ACESSO DIRETO AO MODEL (Bypass do Controller)
+        usuario = usuario_model.get_usuario_por_id(db, usuario_id)
+        if not usuario:
+            return jsonify({'erro': 'Usuário não encontrado'}), 401
+        g.current_user = usuario
+        return f(*args, **kwargs)
+    return decorated
+```
+
+**Python — Depois (Consumindo a lógica através do Controller):**
+```python
+# routes/auth_helper.py (ou middlewares/auth.py)
+from database import get_db
+from controllers import usuario_controller
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # ...
+        db = get_db()
+        try:
+            # ACESSO CORRETO ATRAVÉS DO CONTROLLER
+            usuario = usuario_controller.buscar_usuario(db, usuario_id)
+            g.current_user = usuario
+        except ValueError: # Exceção de domínio tratada
+            return jsonify({'erro': 'Usuário correspondente ao token não encontrado'}), 401
+        return f(*args, **kwargs)
+    return decorated
+```
+
+**Node.js — Antes:**
+```javascript
+// middleware/auth.js
+const db = require('../database');
+const tokenRequired = async (req, res, next) => {
+    // ...
+    // Query direta no banco de dados dentro do middleware
+    const user = await db.get("SELECT * FROM users WHERE id = ?", [decoded.userId]);
+    if (!user) return res.status(401).json({ error: 'Acesso negado' });
+    req.user = user;
+    next();
+};
+```
+
+**Node.js — Depois:**
+```javascript
+// middleware/auth.js
+const userController = require('../controllers/user_controller');
+const tokenRequired = async (req, res, next) => {
+    // ...
+    try {
+        // Delegação para o Controller
+        const user = await userController.getById(decoded.userId);
+        req.user = user;
+        next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Acesso negado' });
+    }
+};
+```
+
 ## Ordem de Aplicação Recomendada
 
 Sempre aplique as transformações nesta ordem para minimizar regressões:
@@ -587,6 +663,7 @@ Sempre aplique as transformações nesta ordem para minimizar regressões:
 8. **PT-08** (error handling) — centralização transversal
 9. **PT-09** (soft delete) — mudança de comportamento
 10. **PT-12** (autenticação de rotas) — proteção e middlewares
-11. **PT-10** (deprecated APIs) — substituições pontuais
-12. **PT-11** (código não utilizado) — limpeza final com linter
-13. **PT-13** (testes) — refatoração/criação de arquivos de teste para a nova arquitetura
+11. **PT-14** (redirecionar banco de middlewares) — acoplamento do middleware corrigido
+12. **PT-10** (deprecated APIs) — substituições pontuais
+13. **PT-11** (código não utilizado) — limpeza final com linter
+14. **PT-13** (testes) — refatoração/criação de arquivos de teste para a nova arquitetura

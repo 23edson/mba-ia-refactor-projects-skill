@@ -2,7 +2,7 @@ import jwt
 from functools import wraps
 from flask import request, jsonify, g
 from database import get_db
-from models import usuario as usuario_model
+from controllers import usuario_controller
 from config import SECRET_KEY
 
 def token_required(f):
@@ -22,8 +22,9 @@ def token_required(f):
             usuario_id = payload.get('sub')
             
             db = get_db()
-            usuario = usuario_model.get_usuario_por_id(db, usuario_id)
-            if not usuario:
+            try:
+                usuario = usuario_controller.buscar_usuario(db, usuario_id)
+            except ValueError:
                 return jsonify({'erro': 'Usuário correspondente ao token não encontrado'}), 401
                 
             g.current_user = usuario

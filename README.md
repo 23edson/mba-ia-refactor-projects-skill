@@ -658,6 +658,9 @@ Para garantir que a skill pudesse auditar e refatorar com sucesso tanto aplicaç
 3. **Revisão e Ajustes Baseados em Feedback**
    - *Desafio:* O feedback técnico apontou que a refatoração original falhava ao não implementar a validação de JWT assinado real (mantendo o mock de string de teste `fake-jwt-token-`) e por realizar exclusão direta de categorias sem validação de integridade referencial com tarefas associadas.
    - *Solução:* Reforçamos o playbook de refatoração com padrões seguros de validação de JWTs criptográficos assinados via `PyJWT` (Python) e `jsonwebtoken` (Node.js), além de regras de verificação preventiva antes de operações destrutivas. Atualizamos e re-executamos as fases em todos os projetos para garantir a resolução completa de todos os apontamentos da auditoria.
+4. **Desvio de Camada em Middlewares (Bypass de Controller):**
+   - *Desafio:* Identificou-se que decoradores e guards de rota (como `auth_helper.py`) realizavam consultas diretas ao banco de dados chamando os Models, contornando a camada de `Controller`. Isso quebrava o fluxo unidirecional e a integridade da arquitetura MVC.
+   - *Solução:* Mapeamos o anti-pattern `AP-17` e o padrão de refatoração `PT-14` nas referências da skill, ensinando o agente a canalizar o acesso de banco em middlewares por meio dos respectivos controladores (ex: `usuario_controller.buscar_usuario`), garantindo o isolamento correto de responsabilidades.
 
 ---
 
@@ -713,11 +716,11 @@ code-smells-project/
 ├── routes/
 │   ├── __init__.py
 │   ├── admin_routes.py
-│   ├── auth.py (Validação e decorators de token)
-│   ├── auth_helper.py
+│   ├── auth_helper.py (Validação e decorators de rota)
 │   ├── pedido_routes.py
 │   ├── produto_routes.py
-│   └── relatorio_routes.py
+│   ├── relatorio_routes.py
+│   └── usuario_routes.py
 └── services/
     ├── __init__.py
     └── notification_service.py (Envio de e-mail/SMS/push desacoplado)

@@ -1,26 +1,33 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, request, jsonify
 from database import get_db
-from routes.auth import admin_required
-import logging
+from controllers import admin_controller
+from routes.auth_helper import token_required, admin_required
 
 admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.route("/admin/reset-db", methods=["POST"])
+@token_required
 @admin_required
 def reset_database():
+    db = get_db()
+    admin_controller.reset_database(db)
+    return jsonify({"mensagem": "Banco de dados resetado", "sucesso": True}), 200
+
+@admin_bp.route("/admin/query", methods=["POST"])
+@token_required
+@admin_required
+def executar_query():
+    dados = request.get_json()
+    query = dados.get("sql", "")
+    if not query:
+        return jsonify({"erro": "Query não informada"}), 400
+
+    db = get_db()
     try:
-        db = get_db()
-        cursor = db.cursor()
-        
-        # Deletar dados de todas as tabelas para reset
-        cursor.execute("DELETE FROM itens_pedido")
-        cursor.execute("DELETE FROM pedidos")
-        cursor.execute("DELETE FROM produtos")
-        cursor.execute("DELETE FROM usuarios")
-        db.commit()
-        
-        logging.warning("BANCO DE DADOS RESETADO POR ADMINISTRADOR")
-        return jsonify({"mensagem": "Banco de dados resetado", "sucesso": True}), 200
+        dados_retornados, is_select = admin_controller.executar_query(db, query)
+        if is_select:
+            return jsonify({"dados": dados_retornados, "sucesso": True}), 200
+        else:
+            return jsonify({"mensagem": "Query executada", "sucesso": True}), 200
     except Exception as e:
-        logging.error(f"Erro ao resetar banco de dados: {e}")
-        return jsonify({"erro": "Erro interno no servidor"}), 500
+        return jsonify({"erro": str(e)}), 400

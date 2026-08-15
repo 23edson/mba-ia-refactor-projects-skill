@@ -1,4 +1,7 @@
 import bcrypt
+import jwt
+from datetime import datetime, timedelta
+from config import SECRET_KEY
 from models import usuario as usuario_model
 
 def listar_usuarios(db):
@@ -48,3 +51,11 @@ def login(db, dados):
         raise ValueError("Email ou senha inválidos")
         
     return usuario
+
+def gerar_token(usuario_id):
+    payload = {
+        "sub": usuario_id,
+        "exp": datetime.utcnow() + timedelta(hours=24),
+        "iat": datetime.utcnow()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
