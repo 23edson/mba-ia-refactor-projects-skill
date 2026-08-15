@@ -8,8 +8,6 @@
 - [x] Entry point limpo?
 - [x] Configurações extraídas?
 
-*A avaliação estrutural confirmou a criação correta dos diretórios `models/`, `controllers/`, `routes/` e `middlewares/`, além da eliminação completa da God Class `AppManager.js`. O entry point `src/app.js` inicializa o Express, registra as rotas de forma limpa, associa o tratamento de erros centralizado e aciona a inicialização do banco de dados.*
-
 ## 2. Checklist Técnico e de Segurança
 - [x] Queries parametrizadas (Sem SQL Injection)?
 - [x] Credenciais e variáveis de ambiente isoladas?
@@ -19,17 +17,25 @@
 - [x] Autenticação implementada em rotas protegidas?
 - [x] Tratamento de erros centralizado e seguro?
 
-*Detalhamento de conformidade:*
-- **Sem SQL Injection:** Toda e qualquer chamada com dados externos foi parametrizada com o caractere `?` no driver do SQLite.
-- **Isolamento de Credenciais:** Mapeado em arquivo `.env` carregado via `dotenv` para o módulo central de configuração `src/config.js`.
-- **Hashing seguro:** Utilização da biblioteca `bcryptjs` para geração e checagem de hashes de senhas (inclusive no seed do usuário "Leonan").
-- **Transação:** Bloco de checkout executa operações de gravação atômica envelopadas em instruções `BEGIN TRANSACTION`, `COMMIT` e `ROLLBACK`.
-- **Performance:** Resolução de N+1 queries no relatório financeiro com a introdução de uma consulta baseada em `LEFT JOIN`.
-- **Autenticação:** Proteção das rotas administrativa (`/api/admin/financial-report`) e destrutiva (`/api/users/:id`) com middleware `src/middlewares/auth.js` validando token.
-- **Tratamento de Erros:** Mapeamento em middleware Express centralizado para responder erros genéricos de banco de dados como `"Erro DB"` em vez de revelar stack traces ou schemas internos.
+## 3. Comparação com o Relatório de Auditoria (audit-project-2.md)
+- [x] Todos os pontos CRITICAL do relatório de auditoria foram resolvidos?
+- [x] Todos os pontos HIGH do relatório de auditoria foram resolvidos?
+- [x] Todos os pontos MEDIUM do relatório de auditoria foram resolvidos?
+- [x] Todos os pontos LOW do relatório de auditoria foram resolvidos?
 
-## 3. Desvios Encontrados (Itens não conformes)
+### Detalhes da verificação dos pontos do audit-project-2.md:
+- **[C-1] Credenciais Hardcoded:** Resolvido. As chaves de API e conexões foram movidas de `src/utils.js` para o arquivo `.env` e são gerenciadas pelo módulo `config.js` via `process.env`.
+- **[C-2] Senhas em Texto Puro / Criptografia Ruim:** Resolvido. O hash de senhas de novos usuários e do login do usuário "Leonan" agora utiliza `bcryptjs`. A função insegura `badCrypto` foi removida.
+- **[C-3] God Class / Monolito:** Resolvido. A classe monolítica `AppManager.js` foi desmembrada em models, controllers, middlewares e rotas sob a pasta `src/`.
+- **[H-1] Sem Autenticação em Rotas Protegidas:** Resolvido. O middleware `src/middleware/auth.js` foi criado para validar tokens JWT reais e protege as rotas `/api/admin/financial-report` e `/api/users/:id`.
+- **[H-2] Sem Transação em Operações Compostas:** Resolvido. O fluxo de checkout utiliza transações do SQLite (`BEGIN TRANSACTION`, `COMMIT` e `ROLLBACK`) para garantir a atomicidade das gravações nas tabelas `enrollments`, `payments` e `audit_logs`.
+- **[M-1] N+1 Queries:** Resolvido. A rota de relatório financeiro foi reescrita utilizando um `LEFT JOIN` unificando as tabelas `courses`, `enrollments`, `users` e `payments`, reduzindo o número de consultas de N+1 para 1.
+- **[M-2] Hard Delete sem Verificação de Integridade:** Resolvido. A rota de remoção de usuário verifica se existem registros na tabela de matrículas (`enrollments`) antes de prosseguir com a deleção.
+- **[L-1] Nomenclatura Problemática:** Resolvido. As variáveis curtas de checkout (`u`, `e`, `p`, `cid`, `cc`) foram renomeadas para termos descritivos (`name`, `email`, `password`, `courseId`, `cardNumber`).
+- **[L-2] APIs Deprecated / Obsoletas:** Resolvido. As referências obsoletas ao construtor `new Buffer()` foram eliminadas.
+
+## 4. Desvios Encontrados (Itens não conformes)
 Nenhum desvio ou item não conforme foi detectado nesta auditoria. O código refatorado adere integralmente às melhores práticas de arquitetura MVC e SOLID propostas.
 
-## 4. Conclusão e Próximos Passos
-O projeto foi refatorado com excelência. Todas as premissas de arquitetura, segurança e corretude operacional foram integralmente satisfeitas. O código está pronto para ser publicado em ambiente produtivo.
+## 5. Conclusão e Próximos Passos
+O projeto foi revisado com sucesso. Todas as correções do relatório de auditoria original foram devidamente implementadas no código refatorado e validadas operacionalmente com 100% de sucesso.

@@ -32,7 +32,16 @@ def login():
     db = get_db()
     dados = request.get_json()
     usuario = usuario_controller.login(db, dados)
-    token = f"fake-jwt-token-{usuario['id']}"
+    import jwt
+    from datetime import datetime, timedelta
+    from config import SECRET_KEY
+    
+    payload = {
+        "sub": usuario["id"],
+        "exp": datetime.utcnow() + timedelta(hours=24),
+        "iat": datetime.utcnow()
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return jsonify({
         "dados": usuario,
         "token": token,

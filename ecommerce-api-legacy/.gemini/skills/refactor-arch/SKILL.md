@@ -128,6 +128,8 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
    - Nenhuma lógica de negócio em models
    - Error handling centralizado — nunca exponha stack traces ao cliente
    - Senhas sempre com hash (bcrypt ou equivalente)
+   - Nenhuma autenticação mock/fake (como strings 'fake-jwt-token-') — use assinaturas JWT reais criptográficas com chaves do arquivo de ambiente/config
+   - Garantir o fluxo de autenticação completo (incluindo rota/controller de login se não existir) para obter e assinar tokens reais
 
 5. **Limpeza e Linting**:
    - Execute uma ferramenta de análise estática (linter, como ESLint para Node.js ou Flake8/Pylint para Python) para identificar e remover automaticamente variáveis e imports não utilizados.

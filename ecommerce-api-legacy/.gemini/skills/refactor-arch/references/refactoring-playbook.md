@@ -317,7 +317,7 @@ app.use(require('./middleware/errorHandler'));
 
 ---
 
-## PT-09 — Soft Delete (AP-11)
+## PT-09 — Soft Delete / Checagem de Integridade antes de Deletar (AP-11)
 
 **Antes:**
 ```python
@@ -333,12 +333,42 @@ cursor.execute("UPDATE produtos SET ativo = 0 WHERE id = ?", (id,))
 cursor.execute("SELECT * FROM produtos WHERE ativo = 1")
 ```
 
-Para usuários com matrículas/pedidos, verificar dependências antes:
+Para usuários ou categorias com dependências, verificar relações antes de deletar:
 ```python
-cursor.execute("SELECT COUNT(*) FROM pedidos WHERE usuario_id = ?", (usuario_id,))
-count = cursor.fetchone()[0]
-if count > 0:
-    raise ValueError("Usuário possui pedidos e não pode ser removido")
+# Python (SQLAlchemy) - Exemplo com Categoria e Tarefas
+from models.task import Task
+
+def delete_category(cat_id):
+    cat = Category.query.get(cat_id)
+    if not cat:
+        raise ValueError('Categoria não encontrada')
+    
+    # Checagem de integridade referencial antes do delete
+    tasks_count = Task.query.filter_by(category_id=cat_id).count()
+    if tasks_count > 0:
+        raise ValueError('Não é possível excluir uma categoria associada a tarefas')
+        
+    db.session.delete(cat)
+    db.session.commit()
+```
+
+```javascript
+// Node.js (Express) - Exemplo com Usuário e Matrículas
+const enrollmentModel = require('../models/enrollment');
+
+async function deleteUser(id) {
+    const user = await userModel.getById(id);
+    if (!user) throw new Error("Usuário não encontrado");
+
+    const hasEnrollments = await enrollmentModel.existsByUserId(id);
+    if (hasEnrollments) {
+        const err = new Error("Usuário possui matrículas e não pode ser removido");
+        err.name = "ValidationError";
+        throw err;
+    }
+
+    await userModel.delete(id);
+}
 ```
 
 ---
@@ -411,34 +441,57 @@ app.listen(3000, () => console.log('Server running'));
 
 ## PT-12 — Implementar Autenticação em Rotas Protegidas (AP-06)
 
-**Python (Flask) — Decorador de Proteção de Rotas:**
+**Python (Flask) — Decorador de Proteção de Rotas com JWT Assinado (PyJWT):**
 ```python
+import jwt
 from functools import wraps
-from flask import request, jsonify, g
+from flask import request, jsonify, g, current_app
 from models.user import User
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization')
-        if not token:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
             return jsonify({'error': 'Token de autorização ausente'}), 401
         
         try:
-            # Em produção, usar JWT real. Para mock/fake-jwt:
-            user_id = int(token.replace('Bearer fake-jwt-token-', ''))
+            token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+            # Decodifica e valida a assinatura com a SECRET_KEY
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload.get('sub') or payload.get('user_id')
             user = User.query.get(user_id)
             if not user or not user.active:
                 return jsonify({'error': 'Acesso negado'}), 401
             g.current_user = user
-        except Exception:
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token expirado'}), 401
+        except jwt.InvalidTokenError:
             return jsonify({'error': 'Token inválido'}), 401
+        except Exception:
+            return jsonify({'error': 'Erro na autenticação'}), 401
         return f(*args, **kwargs)
     return decorated
 ```
 
-**Node.js (Express) — Middleware de Proteção de Rotas:**
+**Geração de Token JWT no Login (Python):**
+```python
+import jwt
+from datetime import datetime, timedelta
+
+def gerar_token(user_id, secret_key):
+    payload = {
+        'sub': user_id,
+        'exp': datetime.utcnow() + timedelta(hours=24),
+        'iat': datetime.utcnow()
+    }
+    return jwt.encode(payload, secret_key, algorithm='HS256')
+```
+
+**Node.js (Express) — Middleware de Proteção de Rotas com JWT Assinado (jsonwebtoken):**
 ```javascript
+const jwt = require('jsonwebtoken');
+const config = require('../config');
 const User = require('../models/user');
 
 const tokenRequired = async (req, res, next) => {
@@ -447,15 +500,25 @@ const tokenRequired = async (req, res, next) => {
 
     try {
         const token = authHeader.replace('Bearer ', '');
-        const userId = parseInt(token.replace('fake-jwt-token-', ''));
-        const user = await User.getById(userId);
+        const decoded = jwt.verify(token, config.secretKey);
+        const user = await User.getById(decoded.userId);
         if (!user || !user.active) return res.status(401).json({ error: 'Acesso negado' });
         req.user = user;
         next();
     } catch (err) {
-        res.status(401).json({ error: 'Token inválido' });
+        return res.status(401).json({ error: 'Token inválido ou expirado' });
     }
 };
+```
+
+**Geração de Token JWT no Login (Node.js):**
+```javascript
+const jwt = require('jsonwebtoken');
+const config = require('../config');
+
+function gerarToken(userId) {
+    return jwt.sign({ userId }, config.secretKey, { expiresIn: '24h' });
+}
 ```
 
 ---

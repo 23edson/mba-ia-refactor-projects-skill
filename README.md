@@ -655,10 +655,14 @@ Para garantir que a skill pudesse auditar e refatorar com sucesso tanto aplicaç
 2. **Alertas de Linters / Variáveis Inutilizadas:**
    - *Desafio:* Variáveis temporárias de tratamento de exceções (como `except Exception as e:`) geravam alertas de variáveis declaradas mas não utilizadas no linter.
    - *Solução:* Configuramos o passo de limpeza e linter na Phase 3, instruindo o agente a varrer os diretórios com `pyflakes` ou `eslint` e ajustar a assinatura dos tratadores de exceção inutilizados.
+3. **Revisão e Ajustes Baseados em Feedback (feedback.md):**
+   - *Desafio:* O feedback técnico apontou que a refatoração original falhava ao não implementar a validação de JWT assinado real (mantendo o mock de string de teste `fake-jwt-token-`) e por realizar exclusão direta de categorias sem validação de integridade referencial com tarefas associadas.
+   - *Solução:* Reforçamos o playbook de refatoração com padrões seguros de validação de JWTs criptográficos assinados via `PyJWT` (Python) e `jsonwebtoken` (Node.js), além de regras de verificação preventiva antes de operações destrutivas. Atualizamos e re-executamos as fases em todos os projetos para garantir a resolução completa de todos os apontamentos da auditoria.
 
 ---
 
 # Resultados e Instruções de Execução
+
 
 Esta seção apresenta os resultados obtidos com a refatoração arquitetural para o padrão MVC e as instruções de execução para cada projeto do repositório.
 
@@ -956,18 +960,18 @@ As rotas de relatórios, pedidos e listagem de usuários requerem autenticação
   ```bash
   curl -X POST -H "Content-Type: application/json" -d '{"email": "admin@loja.com", "senha": "admin123"}' http://localhost:5000/login
   ```
-  O retorno conterá os dados do usuário. O token Bearer fictício correspondente ao `admin` (ID 1) é `fake-jwt-token-1`.
+  O retorno conterá os dados do usuário e o token JWT real assinado no campo `token`.
   
 - **Consultar Usuários (Apenas Admin):**
-  Use o cabeçalho `Authorization: Bearer <token>`:
+  Use o cabeçalho `Authorization: Bearer <token>` com o token JWT retornado no login:
   ```bash
-  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/usuarios
+  curl -H "Authorization: Bearer <token_jwt>" http://localhost:5000/usuarios
   ```
-  *(Se utilizar o token de cliente `fake-jwt-token-2`, o acesso será negado com erro 403).*
+  *(Se utilizar o token de um cliente comum, o acesso será negado com erro 403).*
 
 - **Criar Pedido (Qualquer Usuário Autenticado):**
   ```bash
-  curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer fake-jwt-token-2" -d '{"usuario_id": 2, "itens": [{"produto_id": 1, "quantidade": 1}]}' http://localhost:5000/pedidos
+  curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer <token_jwt>" -d '{"usuario_id": 2, "itens": [{"produto_id": 1, "quantidade": 1}]}' http://localhost:5000/pedidos
   ```
 
 ---
@@ -989,11 +993,11 @@ npm start
 As rotas administrativas e de exclusão de usuários requerem cabeçalho HTTP de autorização.
 - **Realizar login:**
   ```bash
-  curl -X POST -H "Content-Type: application/json" -d '{"email": "leonan@email.com", "password": "senha_segura"}' http://localhost:3000/api/login
+  curl -X POST -H "Content-Type: application/json" -d '{"email": "leonan@fullcycle.com.br", "password": "123"}' http://localhost:3000/api/login
   ```
 - **Acessar relatório financeiro (Admin):**
   ```bash
-  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:3000/api/admin/financial-report
+  curl -H "Authorization: Bearer <token_jwt>" http://localhost:3000/api/admin/financial-report
   ```
 
 ---
@@ -1022,9 +1026,9 @@ As rotas de relatórios exigem autenticação do usuário.
   ```
 - **Acessar Resumo de Tarefas (Admin):**
   ```bash
-  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/reports/summary
+  curl -H "Authorization: Bearer <token_jwt>" http://localhost:5000/reports/summary
   ```
 - **Listar Tasks:**
   ```bash
-  curl -H "Authorization: Bearer fake-jwt-token-1" http://localhost:5000/tasks
+  curl -H "Authorization: Bearer <token_jwt>" http://localhost:5000/tasks
   ```

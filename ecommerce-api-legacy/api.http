@@ -1,5 +1,15 @@
 @baseUrl = http://localhost:3000
 
+### Realizar login para obter token JWT real
+# @name login
+POST {{baseUrl}}/api/login
+Content-Type: application/json
+
+{
+  "email": "leonan@fullcycle.com.br",
+  "password": "123"
+}
+
 ### Checkout - sucesso
 POST {{baseUrl}}/api/checkout
 Content-Type: application/json
@@ -24,10 +34,10 @@ Content-Type: application/json
   "card": "5111222233334444"
 }
 
-### Relatório financeiro administrativo
+### Relatório financeiro administrativo (Substitua <TOKEN> pelo token real retornado no login)
 GET {{baseUrl}}/api/admin/financial-report
-Authorization: Bearer fake-jwt-token-1
+Authorization: Bearer <TOKEN>
 
-### Deletar usuário (deve falhar devido a restrição de integridade referencial para Leonan ID 1)
+### Deletar usuário (Substitua <TOKEN> pelo token real retornado no login)
 DELETE {{baseUrl}}/api/users/1
-Authorization: Bearer fake-jwt-token-1
+Authorization: Bearer <TOKEN>

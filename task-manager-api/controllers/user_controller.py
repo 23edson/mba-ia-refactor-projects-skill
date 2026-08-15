@@ -131,7 +131,18 @@ def login(email, password):
     if not user.active:
         raise ValueError('Usuário inativo')
 
+    import jwt
+    from datetime import datetime, timedelta
+    from flask import current_app
+
+    payload = {
+        'sub': user.id,
+        'exp': datetime.utcnow() + timedelta(hours=24),
+        'iat': datetime.utcnow()
+    }
+    token = jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+
     return {
         'user': user.to_dict(),
-        'token': 'fake-jwt-token-' + str(user.id)
+        'token': token
     }

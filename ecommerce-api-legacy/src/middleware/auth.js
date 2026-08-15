@@ -1,3 +1,5 @@
+const jwt = require('jsonwebtoken');
+const config = require('../../config');
 const userModel = require('../models/user');
 
 const tokenRequired = async (req, res, next) => {
@@ -8,8 +10,9 @@ const tokenRequired = async (req, res, next) => {
 
     try {
         const token = authHeader.replace('Bearer ', '');
-        const userId = parseInt(token.replace('fake-jwt-token-', ''), 10);
-        
+        const decoded = jwt.verify(token, config.secretKey);
+        const userId = decoded.userId;
+
         if (isNaN(userId)) {
             return res.status(401).json({ erro: 'Token inválido' });
         }
@@ -22,7 +25,7 @@ const tokenRequired = async (req, res, next) => {
         req.user = user;
         next();
     } catch (err) {
-        res.status(401).json({ erro: 'Token inválido' });
+        res.status(401).json({ erro: 'Token inválido ou expirado' });
     }
 };
 

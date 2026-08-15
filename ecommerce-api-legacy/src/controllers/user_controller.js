@@ -1,5 +1,39 @@
 const userModel = require('../models/user');
 const enrollmentModel = require('../models/enrollment');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const config = require('../../config');
+
+async function login(email, password) {
+    if (!email || !password) {
+        const err = new Error("Email e senha são obrigatórios");
+        err.name = "ValidationError";
+        throw err;
+    }
+
+    const user = await userModel.getByEmail(email);
+    if (!user) {
+        const err = new Error("Credenciais inválidas");
+        err.name = "ValidationError";
+        throw err;
+    }
+
+    const match = await bcrypt.compare(password, user.pass);
+    if (!match) {
+        const err = new Error("Credenciais inválidas");
+        err.name = "ValidationError";
+        throw err;
+    }
+
+    const token = jwt.sign({ userId: user.id }, config.secretKey, { expiresIn: '24h' });
+    
+    const { pass, ...userWithoutPass } = user;
+
+    return {
+        user: userWithoutPass,
+        token
+    };
+}
 
 async function deleteUser(id) {
     const user = await userModel.getById(id);
@@ -21,5 +55,6 @@ async function deleteUser(id) {
 }
 
 module.exports = {
+    login,
     deleteUser
 };

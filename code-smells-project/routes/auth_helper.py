@@ -1,7 +1,9 @@
+import jwt
 from functools import wraps
 from flask import request, jsonify, g
 from database import get_db
 from models import usuario as usuario_model
+from config import SECRET_KEY
 
 def token_required(f):
     @wraps(f)
@@ -11,16 +13,13 @@ def token_required(f):
             return jsonify({'erro': 'Token de autorização ausente'}), 401
         
         try:
-            # Padrão: Bearer fake-jwt-token-<id>
             parts = auth_header.split()
             if len(parts) != 2 or parts[0].lower() != 'bearer':
                 return jsonify({'erro': 'Formato do token inválido'}), 401
                 
             token = parts[1]
-            if not token.startswith('fake-jwt-token-'):
-                return jsonify({'erro': 'Token inválido'}), 401
-                
-            usuario_id = int(token.replace('fake-jwt-token-', ''))
+            payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+            usuario_id = payload.get('sub')
             
             db = get_db()
             usuario = usuario_model.get_usuario_por_id(db, usuario_id)
@@ -28,8 +27,12 @@ def token_required(f):
                 return jsonify({'erro': 'Usuário correspondente ao token não encontrado'}), 401
                 
             g.current_user = usuario
-        except Exception:
+        except jwt.ExpiredSignatureError:
+            return jsonify({'erro': 'Token expirado'}), 401
+        except (jwt.InvalidTokenError, ValueError):
             return jsonify({'erro': 'Token inválido ou corrompido'}), 401
+        except Exception:
+            return jsonify({'erro': 'Erro na autenticação'}), 401
             
         return f(*args, **kwargs)
     return decorated

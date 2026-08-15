@@ -44,5 +44,10 @@ def delete_category(cat_id):
     if not cat:
         raise ValueError('Categoria não encontrada')
 
+    # Checar se existem tarefas associadas a esta categoria
+    associated_tasks = Task.query.filter_by(category_id=cat_id).count()
+    if associated_tasks > 0:
+        raise ValueError('Não é possível excluir uma categoria associada a tarefas')
+
     db.session.delete(cat)
     db.session.commit()

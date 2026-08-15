@@ -54,6 +54,11 @@ Verifique sistematicamente o código em busca de regressões, desvios ou code sm
 8. **Código Morto e Imports**:
    - Verifique variáveis, funções ou importações não utilizadas que aumentam o ruído.
 
+9. **Comparação com o Relatório de Auditoria anterior**:
+   - Leia obrigatoriamente o relatório de auditoria gerado na Fase 2 da refatoração em `../reports/audit-project-N.md` (onde N é o índice do projeto).
+   - Verifique se cada um dos pontos catalogados como CRITICAL, HIGH, MEDIUM e LOW no relatório de auditoria foi totalmente resolvido.
+   - Se algum ponto não foi resolvido, liste-o como desvio na Seção 4.
+
 ## Fase 3 — Validação Operacional
 
 Execute a verificação prática de boot e conformidade:
@@ -85,14 +90,22 @@ Gere um relatório estruturado em markdown e salve-o no diretório `../reports/r
 - [ ] Autenticação implementada em rotas protegidas?
 - [ ] Tratamento de erros centralizado e seguro?
 
-## 3. Desvios Encontrados (Itens não conformes)
+## 3. Comparação com o Relatório de Auditoria (audit-project-N.md)
+- [ ] Todos os pontos CRITICAL do relatório de auditoria foram resolvidos?
+- [ ] Todos os pontos HIGH do relatório de auditoria foram resolvidos?
+- [ ] Todos os pontos MEDIUM do relatório de auditoria foram resolvidos?
+- [ ] Todos os pontos LOW do relatório de auditoria foram resolvidos?
+
+*Forneça uma descrição detalhada de como cada item (ex: [C-1], [H-1], etc.) do relatório de auditoria correspondente foi endereçado na refatoração.*
+
+## 4. Desvios Encontrados (Itens não conformes)
 *Para cada item não conforme, forneça:*
 - **Arquivo/Linha:**
 - **Descrição do problema:**
 - **Código atual:**
 - **Recomendação de correção:**
 
-## 4. Conclusão e Próximos Passos
+## 5. Conclusão e Próximos Passos
 ```
 
 ## Fase 5 — Atualização do README.md Geral
