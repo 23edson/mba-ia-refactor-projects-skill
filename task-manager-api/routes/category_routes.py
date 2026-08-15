@@ -1,5 +1,5 @@
 import logging
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify
 from utils.auth import token_required
 from controllers import category_controller
 

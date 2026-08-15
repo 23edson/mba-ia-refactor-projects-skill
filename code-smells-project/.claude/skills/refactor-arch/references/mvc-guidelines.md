@@ -1,5 +1,17 @@
 # Guidelines de Arquitetura MVC
 
+> **⚠️ Escopo desta Skill — MVC Clássico (3 Camadas)**
+>
+> Esta skill adota intencionalmente o **MVC clássico de 3 camadas** (Routes → Controllers → Models) como padrão-alvo.
+> Neste modelo, os **Controllers concentram tanto a orquestração quanto as regras de negócio**, o que é adequado para APIs simples e para fins educacionais.
+>
+> Em projetos de médio/grande porte, recomenda-se evoluir para uma arquitetura de 4 camadas introduzindo uma camada de **Services**
+> (Routes → Controllers → Services → Models), onde:
+> - **Controller** apenas valida o payload HTTP e mapeia o retorno para status codes.
+> - **Service** contém exclusivamente a lógica de negócio, agnóstica de protocolo (não conhece `request`, `response` ou `jsonify`).
+>
+> Esta separação adicional está **fora do escopo deste desafio** e não deve ser implementada durante a refatoração.
+
 ## O Padrão Alvo
 
 ```

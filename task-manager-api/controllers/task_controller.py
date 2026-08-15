@@ -30,7 +30,7 @@ def list_tasks():
     return result
 
 def get_task_by_id(task_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         raise ValueError('Task não encontrada')
     
@@ -50,27 +50,32 @@ def create_task(data):
     if len(title) > 200:
         raise ValueError('Título muito longo')
 
+    task = Task()
+    
     status = data.get('status', 'pending')
-    if status not in ['pending', 'in_progress', 'done', 'cancelled']:
+    if not task.validate_status(status):
         raise ValueError('Status inválido')
 
     priority = data.get('priority', 3)
-    if priority < 1 or priority > 5:
+    try:
+        priority = int(priority)
+    except (ValueError, TypeError):
+        raise ValueError('Prioridade inválida')
+    if not task.validate_priority(priority):
         raise ValueError('Prioridade deve ser entre 1 e 5')
 
     user_id = data.get('user_id')
     if user_id:
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             raise ValueError('Usuário não encontrado')
 
     category_id = data.get('category_id')
     if category_id:
-        cat = Category.query.get(category_id)
+        cat = db.session.get(Category, category_id)
         if not cat:
             raise ValueError('Categoria não encontrada')
 
-    task = Task()
     task.title = title
     task.description = data.get('description', '')
     task.status = status
@@ -82,7 +87,7 @@ def create_task(data):
     if due_date:
         try:
             task.due_date = datetime.strptime(due_date, '%Y-%m-%d')
-        except:
+        except (ValueError, TypeError):
             raise ValueError('Formato de data inválido. Use YYYY-MM-DD')
 
     tags = data.get('tags')
@@ -97,7 +102,7 @@ def create_task(data):
     return task.to_dict()
 
 def update_task(task_id, data):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         raise ValueError('Task não encontrada')
 
@@ -117,20 +122,24 @@ def update_task(task_id, data):
 
     if 'status' in data:
         status = data['status']
-        if status not in ['pending', 'in_progress', 'done', 'cancelled']:
+        if not task.validate_status(status):
             raise ValueError('Status inválido')
         task.status = status
 
     if 'priority' in data:
         priority = data['priority']
-        if priority < 1 or priority > 5:
+        try:
+            priority = int(priority)
+        except (ValueError, TypeError):
+            raise ValueError('Prioridade inválida')
+        if not task.validate_priority(priority):
             raise ValueError('Prioridade deve ser entre 1 e 5')
         task.priority = priority
 
     if 'user_id' in data:
         user_id = data['user_id']
         if user_id:
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user:
                 raise ValueError('Usuário não encontrado')
         task.user_id = user_id
@@ -138,7 +147,7 @@ def update_task(task_id, data):
     if 'category_id' in data:
         category_id = data['category_id']
         if category_id:
-            cat = Category.query.get(category_id)
+            cat = db.session.get(Category, category_id)
             if not cat:
                 raise ValueError('Categoria não encontrada')
         task.category_id = category_id
@@ -148,8 +157,8 @@ def update_task(task_id, data):
         if due_date:
             try:
                 task.due_date = datetime.strptime(due_date, '%Y-%m-%d')
-            except:
-                raise ValueError('Formato de data inválido')
+            except (ValueError, TypeError):
+                raise ValueError('Formato de data inválido. Use YYYY-MM-DD')
         else:
             task.due_date = None
 
@@ -165,7 +174,7 @@ def update_task(task_id, data):
     return task.to_dict()
 
 def delete_task(task_id):
-    task = Task.query.get(task_id)
+    task = db.session.get(Task, task_id)
     if not task:
         raise ValueError('Task não encontrada')
     db.session.delete(task)

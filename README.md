@@ -616,6 +616,22 @@ As skills foram estruturadas seguindo a anatomia recomendada pela ferramenta de 
    - `mvc-guidelines.md`: Definição estrita das camadas models, controllers e routes.
    - `refactoring-playbook.md`: Guia de transformações seguras com exemplos de antes/depois.
 
+> **⚠️ Decisão de Design — MVC Clássico (3 Camadas)**
+>
+> A skill adota intencionalmente o **MVC clássico de 3 camadas** como padrão-alvo:
+> ```
+> Routes → Controllers → Models
+> ```
+> Neste modelo, os **Controllers centralizam tanto a orquestração de fluxo quanto as regras de negócio** (validações, cálculos, verificações de integridade). Isso é adequado para APIs simples e para o contexto educacional deste desafio.
+>
+> Em projetos de médio e grande porte, recomenda-se uma arquitetura de **4 camadas**, introduzindo uma camada de **Services**:
+> ```
+> Routes → Controllers → Services → Models
+> ```
+> Nesse modelo mais completo, o *Controller* atua apenas como intermediador HTTP (valida payload e mapeia status codes), enquanto o *Service* contém exclusivamente a lógica de negócio — sendo agnóstico de protocolo (sem conhecimento de `request`, `response` ou `jsonify`) e, portanto, reutilizável por CLIs, workers ou mensageria.
+>
+> **Esta separação adicional foi mantida fora do escopo deste desafio**. O foco é remover anti-patterns, separar responsabilidades em 3 camadas e garantir segurança e qualidade do código.
+
 ---
 
 ## Catálogo de Anti-patterns e Code Smells
@@ -1030,7 +1046,7 @@ python app.py
 As rotas de relatórios exigem autenticação do usuário.
 - **Login:**
   ```bash
-  curl -X POST -H "Content-Type: application/json" -d '{"email": "joao@email.com", "password": "1234"}' http://localhost:5000/login
+  curl -X POST -H "Content-Type: application/json" -d '{"email": "joao@email.com", "password": "Admin123!"}' http://localhost:5000/login
   ```
 - **Acessar Resumo de Tarefas (Admin):**
   ```bash

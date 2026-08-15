@@ -16,21 +16,21 @@ def seed_data():
         u1 = User()
         u1.name = 'João Silva'
         u1.email = 'joao@email.com'
-        u1.set_password('1234')
+        u1.set_password('Admin123!')
         u1.role = 'admin'
         db.session.add(u1)
 
         u2 = User()
         u2.name = 'Maria Santos'
         u2.email = 'maria@email.com'
-        u2.set_password('abcd')
+        u2.set_password('User1234!')
         u2.role = 'user'
         db.session.add(u2)
 
         u3 = User()
         u3.name = 'Pedro Oliveira'
         u3.email = 'pedro@email.com'
-        u3.set_password('pass')
+        u3.set_password('Manager1!')
         u3.role = 'manager'
         db.session.add(u3)
 

@@ -19,7 +19,7 @@ def list_users():
     return result
 
 def get_user_by_id(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise ValueError('Usuário não encontrado')
 
@@ -39,8 +39,8 @@ def create_user(name, email, password, role='user'):
     if not re.match(r'^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$', email):
         raise ValueError('Email inválido')
 
-    if len(password) < 4:
-        raise ValueError('Senha deve ter no mínimo 4 caracteres')
+    if len(password) < 8 or not re.search(r'[a-zA-Z]', password) or not re.search(r'[0-9]', password):
+        raise ValueError('Senha deve ter no mínimo 8 caracteres e conter letras e números')
 
     if role not in ['user', 'admin', 'manager']:
         raise ValueError('Role inválido')
@@ -60,7 +60,7 @@ def create_user(name, email, password, role='user'):
     return user.to_dict()
 
 def update_user(user_id, data):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise ValueError('Usuário não encontrado')
 
@@ -79,8 +79,8 @@ def update_user(user_id, data):
 
     if 'password' in data:
         password = data['password']
-        if len(password) < 4:
-            raise ValueError('Senha muito curta')
+        if len(password) < 8 or not re.search(r'[a-zA-Z]', password) or not re.search(r'[0-9]', password):
+            raise ValueError('Senha deve ter no mínimo 8 caracteres e conter letras e números')
         user.set_password(password)
 
     if 'role' in data:
@@ -96,7 +96,7 @@ def update_user(user_id, data):
     return user.to_dict()
 
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise ValueError('Usuário não encontrado')
 
@@ -108,7 +108,7 @@ def delete_user(user_id):
     db.session.commit()
 
 def get_user_tasks(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise ValueError('Usuário não encontrado')
 

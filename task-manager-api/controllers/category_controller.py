@@ -25,7 +25,7 @@ def create_category(name, description='', color='#000000'):
     return category.to_dict()
 
 def update_category(cat_id, data):
-    cat = Category.query.get(cat_id)
+    cat = db.session.get(Category, cat_id)
     if not cat:
         raise ValueError('Categoria não encontrada')
 
@@ -40,7 +40,7 @@ def update_category(cat_id, data):
     return cat.to_dict()
 
 def delete_category(cat_id):
-    cat = Category.query.get(cat_id)
+    cat = db.session.get(Category, cat_id)
     if not cat:
         raise ValueError('Categoria não encontrada')
 

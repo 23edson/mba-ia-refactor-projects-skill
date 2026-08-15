@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from sqlalchemy.orm import joinedload
+from database import db
 from models.task import Task
 from models.user import User
 from models.category import Category
@@ -87,7 +88,7 @@ def get_summary_report():
     }
 
 def get_user_report(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         raise ValueError('Usuário não encontrado')
 

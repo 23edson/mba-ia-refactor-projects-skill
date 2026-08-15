@@ -1,6 +1,7 @@
 import jwt
 from functools import wraps
 from flask import request, jsonify, g, current_app
+from database import db
 from models.user import User
 
 def token_required(f):
@@ -19,7 +20,7 @@ def token_required(f):
             payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
             user_id = payload.get('sub')
             
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if not user or not user.active:
                 return jsonify({'error': 'Acesso negado'}), 401
             g.current_user = user

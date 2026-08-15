@@ -244,3 +244,16 @@ Cada anti-pattern tem: descrição, severidade, sinais de detecção (o que busc
 - Detecção automatizada por ferramentas de linting (ESLint, Pyflakes, etc.).
 
 **Impacto:** Aumenta o "ruído" no código, tornando-o mais difícil de entender e manter. Pode levar a um aumento no tamanho do bundle em aplicações front-end.
+
+---
+
+### AP-17 — Desvio de Camada em Middlewares / Guards (Bypass de Controller)
+**Severidade:** MEDIUM  
+**Descrição:** Middlewares, decorators ou interceptores de rota que realizam operações de banco de dados diretamente acessando Models ou Driver SQL, contornando a camada de Controller.
+
+**Sinais de detecção:**
+- Importar `database.get_db` ou models diretamente em decoradores de rota (ex: `from models import usuario as usuario_model`).
+- Fazer chamadas diretas como `usuario_model.get_usuario_por_id(...)` dentro de middlewares (`token_required`, `admin_required`, `auth_helper`).
+- Executar `cursor.execute(...)` ou consultas SQL diretamente em middlewares de rotas.
+
+**Impacto:** Quebra o princípio da separação de responsabilidades (MVC) e acopla a camada de entrega (HTTP/Rotas) diretamente aos detalhes de banco de dados, duplicando lógica de validação ou de negócio que deveria estar centralizada no Controller.
