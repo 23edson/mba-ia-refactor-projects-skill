@@ -786,28 +786,33 @@ ecommerce-api-legacy/
 
 Depois:
 ecommerce-api-legacy/
-├── src/
-│   ├── app.js (Composition Root)
-│   ├── config.js (Carregamento seguro de variáveis de ambiente)
-│   ├── database.js (Conexão singleton com SQLite)
-│   ├── controllers/
-│   │   ├── checkout_controller.js
-│   │   ├── report_controller.js
-│   │   └── user_controller.js
-│   ├── models/
-│   │   ├── audit_log.js
-│   │   ├── course.js
-│   │   ├── enrollment.js
-│   │   ├── payment.js
-│   │   └── user.js
-│   ├── routes/
-│   │   ├── checkout_routes.js
-│   │   ├── report_routes.js
-│   │   └── user_routes.js
-│   └── middlewares/
-│       └── auth.js (Middleware de proteção de rotas com JWT)
+├── config.js (Carregamento seguro de variáveis de ambiente)
+├── database.js (Conexão singleton com SQLite)
+├── eslint.config.js (Configuração de análise estática)
 ├── package.json
-└── .env (Isolamento de variáveis locais)
+├── package-lock.json
+├── api.http (Arquivo de testes HTTP)
+├── .env (Isolamento de variáveis locais)
+└── src/
+    ├── app.js (Composition Root)
+    ├── utils.js (Auxiliares de cache de checkout)
+    ├── controllers/
+    │   ├── checkout_controller.js
+    │   ├── report_controller.js
+    │   └── user_controller.js
+    ├── models/
+    │   ├── audit_log.js
+    │   ├── course.js
+    │   ├── enrollment.js
+    │   ├── payment.js
+    │   └── user.js
+    ├── routes/
+    │   ├── checkout_routes.js
+    │   ├── report_routes.js
+    │   └── user_routes.js
+    └── middleware/
+        ├── auth.js (Middleware de proteção de rotas com JWT)
+        └── errorHandler.js (Tratamento centralizado de erros do Express)
 ```
 - **Logs de Execução e Boot da Aplicação:**
   ```text

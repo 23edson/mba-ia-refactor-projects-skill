@@ -26,7 +26,7 @@
 ### Detalhes da verificação dos pontos do audit-project-2.md:
 - **[C-1] Credenciais Hardcoded:** Resolvido. As chaves de API e conexões foram movidas de `src/utils.js` para o arquivo `.env` e são gerenciadas pelo módulo `config.js` via `process.env`.
 - **[C-2] Senhas em Texto Puro / Criptografia Ruim:** Resolvido. O hash de senhas de novos usuários e do login do usuário "Leonan" agora utiliza `bcryptjs`. A função insegura `badCrypto` foi removida.
-- **[C-3] God Class / Monolito:** Resolvido. A classe monolítica `AppManager.js` foi desmembrada em models, controllers, middlewares e rotas sob a pasta `src/`.
+- **[C-3] God Class / Monolito:** Resolvido. A classe monolítica `AppManager.js` foi desmembrada em models, controllers, middlewares e rotas sob a pasta `src/`. O arquivo `AppManager.js` legado foi permanentemente deletado.
 - **[H-1] Sem Autenticação em Rotas Protegidas:** Resolvido. O middleware `src/middleware/auth.js` foi criado para validar tokens JWT reais e protege as rotas `/api/admin/financial-report` e `/api/users/:id`.
 - **[H-2] Sem Transação em Operações Compostas:** Resolvido. O fluxo de checkout utiliza transações do SQLite (`BEGIN TRANSACTION`, `COMMIT` e `ROLLBACK`) para garantir a atomicidade das gravações nas tabelas `enrollments`, `payments` e `audit_logs`.
 - **[M-1] N+1 Queries:** Resolvido. A rota de relatório financeiro foi reescrita utilizando um `LEFT JOIN` unificando as tabelas `courses`, `enrollments`, `users` e `payments`, reduzindo o número de consultas de N+1 para 1.
